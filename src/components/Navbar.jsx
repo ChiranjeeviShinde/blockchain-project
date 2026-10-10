@@ -56,7 +56,7 @@ export const Navbar = () => {
       icon: Ticket,
       badge: userTickets.length > 0 ? userTickets.length : null
     },
-    { name: 'Verify Ticket', path: '/verify', icon: ShieldCheck },
+    ...(isOrganizer ? [{ name: 'Verify Ticket', path: '/verify', icon: ShieldCheck }] : []),
     ...(isOrganizer ? [{ name: 'Organizer Dashboard', path: '/organizer', icon: LayoutDashboard }] : []),
     { name: 'Activity', path: '/activity', icon: Activity },
     // { name: 'About', path: '/about', icon: Info },
@@ -183,18 +183,6 @@ export const Navbar = () => {
                     </div>
 
                     <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between">
-                      <button
-                        onClick={() => {
-                          resetDemoData();
-                          setWalletDropdownOpen(false);
-                        }}
-                        className="text-[11px] text-slate-400 hover:text-white flex items-center gap-1 transition-colors"
-                        title="Reset tickets and transactions to default presentation state"
-                      >
-                        <RefreshCw className="w-3 h-3 text-cyan-400" />
-                        <span>Reset Demo Data</span>
-                      </button>
-
                       <button
                         onClick={() => {
                           disconnectWallet();

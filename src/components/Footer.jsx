@@ -37,12 +37,6 @@ export const Footer = () => {
 
           <div className="flex items-center gap-4 text-[11px] font-mono">
             <span className="text-slate-400">Simulated Block: <span className="text-purple-300">#5,826,490</span></span>
-            <button
-              onClick={resetDemoData}
-              className="text-cyan-400 hover:text-cyan-300 flex items-center gap-1 hover:underline"
-            >
-              <RefreshCw className="w-3 h-3" /> Reset Demo State
-            </button>
           </div>
         </div>
       </div>
