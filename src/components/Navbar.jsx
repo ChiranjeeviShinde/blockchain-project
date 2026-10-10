@@ -182,13 +182,13 @@ export const Navbar = () => {
                       </div>
                     </div>
 
-                    <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between">
+                    <div className="pt-2 border-t border-slate-800/80 flex justify-end">
                       <button
                         onClick={() => {
                           disconnectWallet();
                           setWalletDropdownOpen(false);
                         }}
-                        className="text-[11px] text-rose-400 hover:text-rose-300 font-semibold"
+                        className="text-[11px] text-rose-400 hover:text-rose-300 font-semibold mr-2"
                       >
                         Disconnect
                       </button>

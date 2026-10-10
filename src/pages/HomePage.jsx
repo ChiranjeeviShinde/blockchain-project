@@ -461,12 +461,6 @@ export const HomePage = () => {
               >
                 Explore Events Marketplace
               </Link>
-              <Link
-                to="/verify"
-                className="py-3.5 px-8 rounded-xl font-bold text-sm border border-slate-700 bg-slate-900 hover:bg-slate-800 text-white transition-colors"
-              >
-                Test Gate Scanner
-              </Link>
             </div>
           </div>
         </div>
