@@ -50,6 +50,15 @@ export const BlockchainProvider = ({ children }) => {
     }
   });
 
+  const isOrganizer = Boolean(
+    currentAccount && (
+      currentAccount.role === 'ORGANIZER' ||
+      currentAccount.id === 'acc-3' ||
+      currentAccount.shortName?.toLowerCase() === 'organizer' ||
+      currentAccount.address?.toLowerCase() === '0x9e104a0e98b281699923838d64a38f02434e84a7'
+    )
+  );
+
   // Modals state
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
   const [purchaseModalEvent, setPurchaseModalEvent] = useState(null);
@@ -467,6 +476,7 @@ export const BlockchainProvider = ({ children }) => {
         transactions,
         demoAccounts: DEMO_ACCOUNTS,
         currentAccount,
+        isOrganizer,
         connectWallet,
         disconnectWallet,
         switchAccount,

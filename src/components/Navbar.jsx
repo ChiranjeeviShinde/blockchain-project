@@ -28,7 +28,8 @@ export const Navbar = () => {
     switchAccount, 
     demoAccounts,
     tickets,
-    resetDemoData
+    resetDemoData,
+    isOrganizer
   } = useBlockchain();
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -56,7 +57,7 @@ export const Navbar = () => {
       badge: userTickets.length > 0 ? userTickets.length : null
     },
     { name: 'Verify Ticket', path: '/verify', icon: ShieldCheck },
-    { name: 'Organizer Dashboard', path: '/organizer', icon: LayoutDashboard },
+    ...(isOrganizer ? [{ name: 'Organizer Dashboard', path: '/organizer', icon: LayoutDashboard }] : []),
     { name: 'Activity', path: '/activity', icon: Activity },
     // { name: 'About', path: '/about', icon: Info },
   ];

@@ -32,7 +32,16 @@ const PRESET_IMAGES = [
 
 export const OrganizerPage = () => {
   const navigate = useNavigate();
-  const { events, tickets, transactions, createEvent, currentAccount } = useBlockchain();
+  const { 
+    events, 
+    tickets, 
+    transactions, 
+    createEvent, 
+    currentAccount, 
+    isOrganizer, 
+    switchAccount, 
+    setIsWalletModalOpen 
+  } = useBlockchain();
 
   // Active sub-view: 'OVERVIEW' | 'CREATE_EVENT'
   const [activeView, setActiveView] = useState('OVERVIEW');
@@ -109,6 +118,76 @@ export const OrganizerPage = () => {
     setDeployedEvent(null);
     setActiveView('OVERVIEW');
   };
+
+  if (!isOrganizer) {
+    return (
+      <div className="max-w-2xl mx-auto px-4 py-20 text-center space-y-6">
+        <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center mx-auto text-amber-400">
+          <ShieldCheck className="w-8 h-8" />
+        </div>
+        <div className="space-y-2">
+          <DemoBadge text="RESTRICTED ACCESS • ORGANIZER PORTAL" />
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
+            Organizer Dashboard Restricted
+          </h1>
+          <p className="text-sm text-slate-400 max-w-md mx-auto">
+            This dashboard is only visible and accessible to authorized event organizers and smart contract deployers.
+          </p>
+        </div>
+
+        <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 text-xs font-mono max-w-md mx-auto text-left space-y-2.5">
+          <div className="flex items-center justify-between text-slate-400">
+            <span>Connected Account:</span>
+            <span className={currentAccount ? 'text-cyan-300 font-bold' : 'text-rose-400 font-bold'}>
+              {currentAccount ? currentAccount.name : 'Disconnected'}
+            </span>
+          </div>
+          {currentAccount ? (
+            <>
+              <div className="flex items-center justify-between text-slate-400">
+                <span>Role:</span>
+                <span className="text-amber-400 font-semibold">{currentAccount.role || 'ATTENDEE'}</span>
+              </div>
+              <div className="flex items-center justify-between text-slate-400">
+                <span>Address:</span>
+                <span className="text-slate-300">{currentAccount.shortAddress}</span>
+              </div>
+            </>
+          ) : (
+            <p className="text-slate-400 text-xs font-sans">
+              Connect your wallet using the ChainPass Organizer Vault to deploy contracts and manage ticket allocations.
+            </p>
+          )}
+        </div>
+
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+          {currentAccount ? (
+            <button
+              onClick={() => switchAccount('acc-3')}
+              className="w-full sm:w-auto py-2.5 px-5 rounded-xl bg-gradient-to-r from-brand-blue to-brand-cyan hover:from-blue-600 hover:to-cyan-400 text-white font-bold text-xs shadow-glow-cyan transition-all flex items-center justify-center gap-2"
+            >
+              <LayoutDashboard className="w-4 h-4" />
+              <span>Switch to Organizer Wallet</span>
+            </button>
+          ) : (
+            <button
+              onClick={() => setIsWalletModalOpen(true)}
+              className="w-full sm:w-auto py-2.5 px-5 rounded-xl bg-brand-blue hover:bg-blue-600 text-white font-bold text-xs shadow-glow-blue transition-all flex items-center justify-center gap-2"
+            >
+              <span>Connect Wallet</span>
+            </button>
+          )}
+
+          <button
+            onClick={() => navigate('/events')}
+            className="w-full sm:w-auto py-2.5 px-4 rounded-xl bg-slate-900/60 hover:bg-slate-800 border border-slate-800 text-slate-300 font-semibold text-xs transition-colors"
+          >
+            Explore Events
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
