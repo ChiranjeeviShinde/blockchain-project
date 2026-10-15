@@ -13,7 +13,7 @@ export const TicketQRCode = ({ ticket, size = 160, showDetails = true }) => {
     eventId: ticket.eventId,
     owner: ticket.ownerAddress,
     status: ticket.status,
-    verificationUrl: `https://chainpass.demo/verify?id=${ticket.id}`
+    verificationUrl: `https://tixora.demo/verify?id=${ticket.id}`
   });
 
   const handleCopyId = (e) => {

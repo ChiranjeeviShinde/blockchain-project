@@ -155,7 +155,7 @@ export const OrganizerPage = () => {
             </>
           ) : (
             <p className="text-slate-400 text-xs font-sans">
-              Connect your wallet using the ChainPass Organizer Vault to deploy contracts and manage ticket allocations.
+              Connect your wallet using the Tixora Organizer Vault to deploy contracts and manage ticket allocations.
             </p>
           )}
         </div>
@@ -562,7 +562,7 @@ export const OrganizerPage = () => {
               <div>
                 <h4 className="text-lg font-bold text-white">Event Contract Successfully Deployed!</h4>
                 <p className="text-xs text-emerald-300 mt-0.5">
-                  The event is now active on the ChainPass explore marketplace.
+                  The event is now active on the Tixora explore marketplace.
                 </p>
               </div>
 

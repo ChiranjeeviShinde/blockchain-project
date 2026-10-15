@@ -4,10 +4,10 @@ import { DEMO_ACCOUNTS, INITIAL_EVENTS, INITIAL_TICKETS, INITIAL_TRANSACTIONS } 
 const BlockchainContext = createContext(null);
 
 const STORAGE_KEYS = {
-  EVENTS: 'chainpass_events_v1',
-  TICKETS: 'chainpass_tickets_v1',
-  TRANSACTIONS: 'chainpass_transactions_v1',
-  ACCOUNT: 'chainpass_active_account_v1'
+  EVENTS: 'tixora_events_v1',
+  TICKETS: 'tixora_tickets_v1',
+  TRANSACTIONS: 'tixora_transactions_v1',
+  ACCOUNT: 'tixora_active_account_v1'
 };
 
 export const BlockchainProvider = ({ children }) => {
@@ -419,14 +419,14 @@ export const BlockchainProvider = ({ children }) => {
       totalTickets: Number(eventData.totalTickets) || 100,
       soldTickets: 0,
       image: eventData.image || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&auto=format&fit=crop&q=80',
-      organizer: eventData.organizer || (currentAccount ? currentAccount.shortName : 'ChainPass Community'),
+      organizer: eventData.organizer || (currentAccount ? currentAccount.shortName : 'Tixora Community'),
       organizerAddress: currentAccount ? currentAccount.address : '0x9E104a0e98B281699923838D64a38F02434E84A7',
       contractAddress: contractAddress,
       tokenStandard: 'ERC-721',
       network: 'Sepolia Testnet (Simulated)',
       status: 'ACTIVE',
       description: eventData.description,
-      tags: ['Live Event', 'ERC-721', 'ChainPass Verified']
+      tags: ['Live Event', 'ERC-721', 'Tixora Verified']
     };
 
     setEvents(prev => [newEvent, ...prev]);

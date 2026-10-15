@@ -58,7 +58,7 @@ export const WalletModal = () => {
             </div>
             <div>
               <h3 className="text-lg font-bold text-white tracking-wide">Connect Web3 Wallet</h3>
-              <p className="text-xs text-slate-400">Simulate Ethereum / EVM Wallet for ChainPass</p>
+              <p className="text-xs text-slate-400">Simulate Ethereum / EVM Wallet for Tixora</p>
             </div>
           </div>
           <button

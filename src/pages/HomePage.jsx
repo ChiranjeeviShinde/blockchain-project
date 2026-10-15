@@ -285,7 +285,7 @@ export const HomePage = () => {
               <div className="flex items-center gap-2">
                 <Activity className="w-4 h-4 text-cyan-400" />
                 <h3 className="text-xs font-bold uppercase tracking-wider text-white font-mono">
-                  ChainPass Platform Metrics
+                  Tixora Platform Metrics
                 </h3>
               </div>
               <span className="text-[10px] font-mono text-cyan-400/80 bg-cyan-950/60 px-2.5 py-0.5 rounded border border-cyan-500/30">
@@ -347,14 +347,14 @@ export const HomePage = () => {
         </div>
       </section>
 
-      {/* 4. WHY CHAINPASS? BENEFIT GRID */}
+      {/* 4. WHY Tixora? BENEFIT GRID */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
         <div className="text-center max-w-2xl mx-auto space-y-3">
           <span className="text-xs font-mono uppercase tracking-widest text-cyan-400 font-semibold">
             THE ARCHITECTURAL ADVANTAGE
           </span>
           <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
-            Why ChainPass?
+            Why Tixora?
           </h2>
           <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
             Eliminating scalping, counterfeit tickets, and entry bottlenecks with cryptographic smart contract logic.
@@ -386,7 +386,7 @@ export const HomePage = () => {
       </section>
 
       {/* 5. HOW IT WORKS WORKFLOW */}
-      <section id="how-it-works" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8 scroll-mt-24">
+      {/* <section id="how-it-works" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8 scroll-mt-24">
         <div className="text-center max-w-2xl mx-auto space-y-3">
           <span className="text-xs font-mono uppercase tracking-widest text-cyan-400 font-semibold">
             COMPLETE VERIFICATION PIPELINE
@@ -399,7 +399,7 @@ export const HomePage = () => {
           </p>
         </div>
 
-        {/* 8 Connected Nodes Grid */}
+        
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 relative">
           {workflowSteps.map((step, idx) => (
             <div
@@ -417,10 +417,10 @@ export const HomePage = () => {
             </div>
           ))}
         </div>
-      </section>
+      </section> */}
 
       {/* 6. LIVE BLOCKCHAIN ACTIVITY PREVIEW */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+      {/* <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-xl sm:text-2xl font-bold text-white">Live Blockchain Ledger Activity</h2>
@@ -438,7 +438,7 @@ export const HomePage = () => {
         </div>
 
         <BlockchainActivityTimeline limit={4} showFilter={false} />
-      </section>
+      </section> */}
 
       {/* 7. BOTTOM CALL TO ACTION */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

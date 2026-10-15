@@ -6,7 +6,7 @@ import {
   Ticket, 
   Wallet, 
   ShieldCheck, 
-  LayoutDashboard, 
+  LayoutDashboard,  
   Compass, 
   Info, 
   Menu, 
@@ -50,15 +50,15 @@ export const Navbar = () => {
   const navLinks = [
     { name: 'Home', path: '/', icon: Home },
     { name: 'Explore Events', path: '/events', icon: Compass },
-    { 
+    ...(!isOrganizer ? [{ 
       name: 'My Tickets', 
       path: '/my-tickets', 
       icon: Ticket,
       badge: userTickets.length > 0 ? userTickets.length : null
-    },
+    }] : []),
     ...(isOrganizer ? [{ name: 'Verify Ticket', path: '/verify', icon: ShieldCheck }] : []),
     ...(isOrganizer ? [{ name: 'Organizer Dashboard', path: '/organizer', icon: LayoutDashboard }] : []),
-    { name: 'Activity', path: '/activity', icon: Activity },
+    ...(isOrganizer ? [{ name: 'Activity', path: '/activity', icon: Activity }] : []),
     // { name: 'About', path: '/about', icon: Info },
   ];
 
@@ -75,7 +75,7 @@ export const Navbar = () => {
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-xl font-extrabold tracking-tight text-white group-hover:text-cyan-300 transition-colors">
-                  Chain<span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-cyan to-brand-blue">Pass</span>
+                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-cyan to-brand-blue">Tixora</span>
                 </span>
               </div>
               <p className="text-[10px] text-slate-400 tracking-wider font-mono">Chain of Trust Ticketing</p>

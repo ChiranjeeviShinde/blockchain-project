@@ -1,4 +1,4 @@
-// Initial Mock Data for ChainPass Platform
+// Initial Mock Data for Tixora Platform
 
 export const DEMO_ACCOUNTS = [
   {
@@ -25,7 +25,7 @@ export const DEMO_ACCOUNTS = [
   },
   {
     id: 'acc-3',
-    name: 'ChainPass Organizer Vault',
+    name: 'Tixora Organizer Vault',
     shortName: 'Organizer',
     role: 'ORGANIZER',
     address: '0x9E104a0e98B281699923838D64a38F02434E84A7',

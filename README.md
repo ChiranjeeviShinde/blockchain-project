@@ -1,8 +1,8 @@
-# ChainPass — Blockchain-Based Event Ticketing Platform
+# Tixora — Blockchain-Based Event Ticketing Platform
 
 > **"Every Ticket Has a Chain of Trust."**
 
-ChainPass is a modern, interactive decentralized event ticketing platform frontend prototype developed for an academic B.Tech CSE project. It demonstrates how blockchain technology and smart contracts (ERC-721 standard) eliminate counterfeit tickets, duplicate gate entries, and unauthorized scalping by maintaining transparent ownership records and enabling instant QR verification.
+Tixora is a modern, interactive decentralized event ticketing platform frontend prototype developed for an academic B.Tech CSE project. It demonstrates how blockchain technology and smart contracts (ERC-721 standard) eliminate counterfeit tickets, duplicate gate entries, and unauthorized scalping by maintaining transparent ownership records and enabling instant QR verification.
 
 ---
 

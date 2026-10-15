@@ -94,11 +94,11 @@ export const AboutPage = () => {
       <div className="space-y-3">
         <DemoBadge text="B.TECH CSE CAPSTONE • ARCHITECTURAL OVERVIEW" />
         <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
-          About ChainPass & System Architecture
+          About Tixora & System Architecture
         </h1>
         <p className="text-sm text-slate-300 max-w-3xl leading-relaxed">
           Traditional ticketing systems suffer from predatory scalping, counterfeits, opaque resale markups, and database silos. 
-          ChainPass applies decentralized ledger principles to establish an immutable, verifiable chain of trust.
+          Tixora applies decentralized ledger principles to establish an immutable, verifiable chain of trust.
         </p>
       </div>
 

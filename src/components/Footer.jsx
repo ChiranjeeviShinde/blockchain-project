@@ -126,7 +126,7 @@ export const Footer = () => {
 
         {/* Bottom copyright row */}
         <div className="pt-8 mt-8 border-t border-slate-900 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-slate-500">
-          <p>© 2026 ChainPass Project.</p>
+          <p>© 2026 Tixora Project.</p>
           <p className="flex items-center gap-1">
             Simulated Web3 Environment • All Transactions Recorded Locally
           </p>

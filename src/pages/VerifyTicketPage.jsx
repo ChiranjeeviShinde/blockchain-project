@@ -219,7 +219,7 @@ export const VerifyTicketPage = () => {
             </>
           ) : (
             <p className="text-slate-400 text-xs font-sans">
-              Connect your wallet using the ChainPass Organizer Vault to verify tickets and admit attendees.
+              Connect your wallet using the Tixora Organizer Vault to verify tickets and admit attendees.
             </p>
           )}
         </div>

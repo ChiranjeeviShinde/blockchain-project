@@ -22,8 +22,6 @@ export const MyTicketsPage = () => {
     tickets, 
     currentAccount, 
     setIsWalletModalOpen,
-    switchAccount,
-    demoAccounts,
     setTransferModalTicket,
     setDetailModalTicket
   } = useBlockchain();
@@ -126,7 +124,7 @@ export const MyTicketsPage = () => {
               ))}
             </div>
 
-            {/* Account Switcher Pills for Instant Transfer Verification */}
+            {/* Account Switcher Pills for Instant Transfer Verification
             <div className="flex items-center gap-2 text-xs">
               <span className="text-slate-400 font-mono text-[11px] hidden sm:inline">Switch Wallet View:</span>
               {demoAccounts.map(acc => (
@@ -143,7 +141,7 @@ export const MyTicketsPage = () => {
                   {acc.shortName}
                 </button>
               ))}
-            </div>
+            </div> */}
           </div>
 
           {/* Tickets Grid */}
