@@ -89,7 +89,7 @@ export const MyTicketsPage = () => {
             onClick={() => setIsWalletModalOpen(true)}
             className="py-3 px-6 rounded-xl font-bold text-xs bg-gradient-to-r from-brand-blue to-brand-cyan hover:from-blue-600 hover:to-cyan-400 text-white shadow-glow-blue transition-all"
           >
-            Connect Demo Wallet
+            Connect Wallet (MetaMask / Demo)
           </button>
         </div>
       )}

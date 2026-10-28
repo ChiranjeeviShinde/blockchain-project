@@ -22,34 +22,34 @@ export const AboutPage = () => {
   const architectureLayers = [
     {
       title: 'React 19 Frontend',
-      tech: 'Vite • Tailwind CSS • React Router',
-      role: 'User Interface & State Management',
-      desc: 'Provides intuitive attendee ticket purchasing, wallet visualization, QR presentation, and organizer dashboards.',
+      tech: 'Vite • Tailwind CSS • React Router • ethers.js v6',
+      role: 'User Interface & Web3 Integration',
+      desc: 'Provides intuitive attendee ticket purchasing, MetaMask wallet visualization, live QR presentation, and organizer dashboards.',
       isSimulated: false,
       color: 'border-blue-500/40 text-blue-400'
     },
     {
-      title: 'Wallet Interface',
-      tech: 'EIP-1193 / Web3 Provider Simulator',
+      title: 'MetaMask & Web3 Provider',
+      tech: 'EIP-1193 / window.ethereum / BrowserProvider',
       role: 'Identity & Cryptographic Signing',
-      desc: 'Simulates non-custodial EVM wallet accounts (Alice, Bob, Organizer) with public-key address management and balance tracking.',
-      isSimulated: true,
+      desc: 'Connects directly to MetaMask for account management, transaction signing, and Sepolia testnet network switching with demo fallback.',
+      isSimulated: false,
       color: 'border-cyan-500/40 text-cyan-400'
     },
     {
-      title: 'Smart Contract Layer',
-      tech: 'OpenZeppelin ERC-721 Standard Logic',
-      role: 'On-Chain Business Rules',
-      desc: 'Implements minting constraints, ownership checks, status transitions (VALID → USED), and transfer authorization controls.',
-      isSimulated: true,
+      title: 'Solidity Smart Contract Layer',
+      tech: 'BlockTix.sol • OpenZeppelin ERC-721 • ReentrancyGuard',
+      role: 'On-Chain Business Rules & Anti-Replay',
+      desc: 'Enforces supply caps, minting logic, ticket ownership, permanent gate invalidation (VALID → USED), and non-transferability of redeemed tickets.',
+      isSimulated: false,
       color: 'border-purple-500/40 text-purple-400'
     },
     {
-      title: 'Blockchain Network',
-      tech: 'EVM Sepolia Testnet (Simulated)',
+      title: 'Ethereum Sepolia Testnet',
+      tech: 'Chain ID 11155111 • Etherscan Verification',
       role: 'Immutable Distributed Ledger',
-      desc: 'Records non-repudiable transaction hashes, gas consumption, block sequencing, and complete token provenance histories.',
-      isSimulated: true,
+      desc: 'Records non-repudiable transaction hashes, block receipts, gas consumption, and full NFT ticket provenance histories.',
+      isSimulated: false,
       color: 'border-emerald-500/40 text-emerald-400'
     }
   ];

@@ -17,7 +17,10 @@ import {
   RefreshCw, 
   Layers,
   ArrowRightLeft,
-  Activity
+  Activity,
+  AlertTriangle,
+  Globe,
+  Settings2
 } from 'lucide-react';
 
 export const Navbar = () => {
@@ -29,7 +32,15 @@ export const Navbar = () => {
     demoAccounts,
     tickets,
     resetDemoData,
-    isOrganizer
+    isOrganizer,
+    organizerOverride,
+    setOrganizerOverride,
+    networkChainId,
+    isSepolia,
+    switchToSepoliaNetwork,
+    contractAddress,
+    isContractConfigured,
+    activeMode
   } = useBlockchain();
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -50,16 +61,17 @@ export const Navbar = () => {
   const navLinks = [
     { name: 'Home', path: '/', icon: Home },
     { name: 'Explore Events', path: '/events', icon: Compass },
-    ...(!isOrganizer ? [{ 
+    { 
       name: 'My Tickets', 
       path: '/my-tickets', 
       icon: Ticket,
       badge: userTickets.length > 0 ? userTickets.length : null
-    }] : []),
-    ...(isOrganizer ? [{ name: 'Verify Ticket', path: '/verify', icon: ShieldCheck }] : []),
-    ...(isOrganizer ? [{ name: 'Organizer Dashboard', path: '/organizer', icon: LayoutDashboard }] : []),
-    ...(isOrganizer ? [{ name: 'Activity', path: '/activity', icon: Activity }] : []),
-    // { name: 'About', path: '/about', icon: Info },
+    },
+    ...(isOrganizer ? [
+      { name: 'Verify Ticket', path: '/verify', icon: ShieldCheck },
+      { name: 'Organizer Dashboard', path: '/organizer', icon: LayoutDashboard },
+    ] : []),
+    { name: 'Activity', path: '/activity', icon: Activity },
   ];
 
   return (
@@ -77,6 +89,12 @@ export const Navbar = () => {
                 <span className="text-xl font-extrabold tracking-tight text-white group-hover:text-cyan-300 transition-colors">
                   <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-cyan to-brand-blue">Tixora</span>
                 </span>
+                {/* Live Sepolia Badge */}
+                {currentAccount?.isMetaMask && isSepolia && (
+                  <span className="px-1.5 py-0.5 text-[9px] font-mono font-bold rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                    SEPOLIA
+                  </span>
+                )}
               </div>
               <p className="text-[10px] text-slate-400 tracking-wider font-mono">Chain of Trust Ticketing</p>
             </div>
@@ -114,33 +132,46 @@ export const Navbar = () => {
               <div className="relative">
                 <button
                   onClick={() => setWalletDropdownOpen(!walletDropdownOpen)}
-                  className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-slate-900/80 border border-cyan-500/40 hover:border-cyan-400 text-white transition-all shadow-glow-cyan/20 group"
+                  className={`flex items-center gap-2.5 px-3 py-1.5 rounded-xl border text-white transition-all group ${
+                    currentAccount.isMetaMask
+                      ? 'bg-slate-900/90 border-amber-500/50 hover:border-amber-400 shadow-glow-amber/20'
+                      : 'bg-slate-900/80 border-cyan-500/40 hover:border-cyan-400 shadow-glow-cyan/20'
+                  }`}
                 >
                   <img
                     src={currentAccount.avatar}
                     alt={currentAccount.name}
-                    className="w-6 h-6 rounded-full object-cover border border-cyan-400/50"
+                    className={`w-6 h-6 rounded-full object-cover border ${
+                      currentAccount.isMetaMask ? 'border-amber-400' : 'border-cyan-400/50'
+                    }`}
                   />
                   <div className="text-left font-mono">
                     <p className="text-xs font-bold text-white group-hover:text-cyan-300 transition-colors">
                       {currentAccount.shortAddress}
                     </p>
-                    <p className="text-[10px] text-cyan-400 leading-none">
-                      {currentAccount.shortName}
-                    </p>
+                    <div className="flex items-center gap-1">
+                      <span className={`w-1.5 h-1.5 rounded-full ${
+                        currentAccount.isMetaMask ? (isSepolia ? 'bg-emerald-400' : 'bg-amber-400') : 'bg-cyan-400'
+                      }`} />
+                      <p className="text-[10px] text-slate-400 leading-none">
+                        {currentAccount.isMetaMask ? (isSepolia ? 'Sepolia' : 'Wrong Net') : currentAccount.shortName}
+                      </p>
+                    </div>
                   </div>
                   <ChevronDown className="w-3.5 h-3.5 text-slate-400 group-hover:text-white transition-colors" />
                 </button>
 
-                {/* Dropdown for account switcher */}
+                {/* Dropdown */}
                 {walletDropdownOpen && (
                   <div 
-                    className="absolute right-0 mt-2 w-72 glass-dropdown rounded-2xl p-3 space-y-3 z-50 animate-fade-in"
+                    className="absolute right-0 mt-2 w-80 glass-dropdown rounded-2xl p-3 space-y-3 z-50 animate-fade-in"
                     onClick={(e) => e.stopPropagation()}
                   >
                     <div className="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800">
                       <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-mono uppercase text-slate-400">Connected Wallet</span>
+                        <span className="text-[10px] font-mono uppercase text-slate-400 flex items-center gap-1">
+                          {currentAccount.isMetaMask ? '🦊 MetaMask Wallet' : 'Demo Wallet'}
+                        </span>
                         <button
                           onClick={() => handleCopy(currentAccount.address)}
                           className="text-[10px] text-cyan-400 hover:underline flex items-center gap-1 font-mono"
@@ -150,45 +181,88 @@ export const Navbar = () => {
                         </button>
                       </div>
                       <p className="font-mono text-xs text-white truncate mt-1">{currentAccount.address}</p>
+                      
                       <div className="mt-2 pt-2 border-t border-slate-800 flex items-center justify-between text-xs">
                         <span className="text-slate-400">Balance:</span>
                         <span className="font-mono text-cyan-300 font-semibold">{currentAccount.balanceEth}</span>
                       </div>
-                    </div>
 
-                    {/* Switch accounts */}
-                    <div>
-                      <span className="text-[10px] uppercase tracking-wider font-semibold text-slate-400 block px-1 mb-1.5">
-                        Switch Demo Account
-                      </span>
-                      <div className="space-y-1">
-                        {demoAccounts.map(acc => (
-                          <button
-                            key={acc.id}
-                            onClick={() => {
-                              switchAccount(acc.id);
-                              setWalletDropdownOpen(false);
-                            }}
-                            className={`w-full p-2 rounded-lg text-left text-xs transition-colors flex items-center justify-between ${
-                              currentAccount.id === acc.id
-                                ? 'bg-blue-600/20 text-cyan-300 border border-cyan-400/40'
-                                : 'hover:bg-slate-800/60 text-slate-300'
-                            }`}
-                          >
-                            <span className="truncate">{acc.name}</span>
-                            <span className="text-[10px] font-mono text-slate-400">{acc.shortAddress}</span>
-                          </button>
-                        ))}
+                      {/* Network & Contract Details in Dropdown */}
+                      <div className="mt-2 pt-2 border-t border-slate-800/80 text-[11px] space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-slate-400">Network:</span>
+                          {currentAccount.isMetaMask ? (
+                            isSepolia ? (
+                              <span className="text-emerald-400 font-mono">Sepolia (11155111)</span>
+                            ) : (
+                              <button
+                                onClick={switchToSepoliaNetwork}
+                                className="text-amber-400 hover:underline font-mono text-[10px]"
+                              >
+                                Switch to Sepolia
+                              </button>
+                            )
+                          ) : (
+                            <span className="text-cyan-300 font-mono">Simulated</span>
+                          )}
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-slate-400">Contract:</span>
+                          <span className={`font-mono text-[10px] ${isContractConfigured ? 'text-emerald-400' : 'text-slate-500'}`}>
+                            {isContractConfigured ? `${contractAddress.substring(0, 6)}...${contractAddress.substring(contractAddress.length - 4)}` : 'Not Set (Demo Mode)'}
+                          </span>
+                        </div>
                       </div>
                     </div>
 
-                    <div className="pt-2 border-t border-slate-800/80 flex justify-end">
+                    {/* Organizer Role Toggle for College Project Demonstration */}
+                    <div className="p-2 rounded-lg bg-blue-950/20 border border-blue-500/20 flex items-center justify-between text-xs">
+                      <div>
+                        <span className="font-semibold text-white block text-[11px]">Organizer Access</span>
+                        <span className="text-[10px] text-slate-400">Gate verification & event creation</span>
+                      </div>
+                      <button
+                        onClick={() => setOrganizerOverride(!organizerOverride)}
+                        className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold transition-colors ${
+                          isOrganizer
+                            ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                            : 'bg-slate-800 text-slate-400 hover:text-white'
+                        }`}
+                      >
+                        {isOrganizer ? 'AUTHORIZED' : 'ENABLE'}
+                      </button>
+                    </div>
+
+                    {/* Wallet Modal Trigger */}
+                    <button
+                      onClick={() => {
+                        setIsWalletModalOpen(true);
+                        setWalletDropdownOpen(false);
+                      }}
+                      className="w-full py-1.5 px-2.5 rounded-lg text-left text-xs text-slate-300 hover:bg-slate-800/60 transition-colors flex items-center justify-between"
+                    >
+                      <span className="flex items-center gap-1.5">
+                        <Settings2 className="w-3.5 h-3.5 text-cyan-400" />
+                        <span>Wallet & Contract Settings</span>
+                      </span>
+                    </button>
+
+                    <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between">
+                      <button
+                        onClick={() => {
+                          setIsWalletModalOpen(true);
+                          setWalletDropdownOpen(false);
+                        }}
+                        className="text-[11px] text-cyan-400 hover:underline"
+                      >
+                        Switch Wallet
+                      </button>
                       <button
                         onClick={() => {
                           disconnectWallet();
                           setWalletDropdownOpen(false);
                         }}
-                        className="text-[11px] text-rose-400 hover:text-rose-300 font-semibold mr-2"
+                        className="text-[11px] text-rose-400 hover:text-rose-300 font-semibold"
                       >
                         Disconnect
                       </button>
@@ -209,7 +283,7 @@ export const Navbar = () => {
             {/* Presentation quick reset icon */}
             <button
               onClick={resetDemoData}
-              title="Reset Demo Data (Presentation mode)"
+              title="Reset Demo State"
               className="p-2 rounded-xl border border-slate-800 text-slate-400 hover:text-cyan-300 hover:border-cyan-500/40 hover:bg-slate-900/60 transition-colors"
             >
               <RefreshCw className="w-4 h-4" />

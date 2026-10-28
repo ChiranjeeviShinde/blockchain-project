@@ -22,7 +22,9 @@ import {
   RefreshCw,
   Zap,
   ArrowRight,
-  LayoutDashboard
+  LayoutDashboard,
+  ExternalLink,
+  Layers
 } from 'lucide-react';
 
 export const VerifyTicketPage = () => {
@@ -35,8 +37,12 @@ export const VerifyTicketPage = () => {
     events, 
     currentAccount, 
     isOrganizer, 
+    organizerOverride,
+    setOrganizerOverride,
     switchAccount, 
-    setIsWalletModalOpen 
+    setIsWalletModalOpen,
+    contractAddress,
+    isContractConfigured
   } = useBlockchain();
 
   // Verification method tab: 'MANUAL' | 'CAMERA'
@@ -46,7 +52,9 @@ export const VerifyTicketPage = () => {
   // Verification result state
   const [verificationResult, setVerificationResult] = useState(null);
   const [approvalSuccess, setApprovalSuccess] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
   const [isProcessingApproval, setIsProcessingApproval] = useState(false);
+  const [approvalTxHash, setApprovalTxHash] = useState('');
 
   // Camera scanner state
   const [isScanning, setIsScanning] = useState(false);
@@ -68,7 +76,6 @@ export const VerifyTicketPage = () => {
     setIsScanning(true);
 
     try {
-      // Ensure reader container exists
       const html5QrCode = new Html5Qrcode("reader");
       scannerRef.current = html5QrCode;
 
@@ -78,12 +85,11 @@ export const VerifyTicketPage = () => {
         { facingMode: "environment" },
         config,
         (decodedText) => {
-          // Success callback
           let parsedId = decodedText;
           try {
-            // If QR is JSON encoded
             const parsed = JSON.parse(decodedText);
             if (parsed.ticketId) parsedId = parsed.ticketId;
+            else if (parsed.id) parsedId = parsed.id;
           } catch {
             // Raw text or ID
           }
@@ -92,8 +98,8 @@ export const VerifyTicketPage = () => {
           setInputTicketId(parsedId);
           performVerification(parsedId);
         },
-        (errorMessage) => {
-          // ignore frame errors
+        () => {
+          // Frame errors ignored
         }
       );
     } catch (err) {
@@ -116,7 +122,6 @@ export const VerifyTicketPage = () => {
     setIsScanning(false);
   };
 
-  // Cleanup camera on unmount or if non-organizer
   useEffect(() => {
     return () => {
       if (scannerRef.current) {
@@ -134,10 +139,21 @@ export const VerifyTicketPage = () => {
   }, [isOrganizer, isScanning]);
 
   // Perform verification logic
-  const performVerification = (idToVerify) => {
+  const performVerification = async (idToVerify) => {
     setApprovalSuccess(false);
-    const result = verifyTicket(idToVerify);
-    setVerificationResult(result);
+    setIsVerifying(true);
+    try {
+      const result = await verifyTicket(idToVerify);
+      setVerificationResult(result);
+    } catch (err) {
+      console.error(err);
+      setVerificationResult({
+        found: false,
+        reason: 'Verification error: ' + (err.message || 'Could not query contract'),
+      });
+    } finally {
+      setIsVerifying(false);
+    }
   };
 
   const handleManualSubmit = (e) => {
@@ -146,7 +162,6 @@ export const VerifyTicketPage = () => {
     performVerification(inputTicketId.trim());
   };
 
-  // Quick Demo Fill Helper
   const handleQuickTest = (ticketId) => {
     setInputTicketId(ticketId);
     performVerification(ticketId);
@@ -158,17 +173,19 @@ export const VerifyTicketPage = () => {
     setIsProcessingApproval(true);
 
     try {
-      await new Promise(r => setTimeout(r, 900)); // simulate check
-      const updated = approveTicketEntry(verificationResult.ticket.id);
+      const updated = await approveTicketEntry(verificationResult.ticket.id);
       setIsProcessingApproval(false);
       setApprovalSuccess(true);
-      // Refresh verification state with updated USED status
+      if (updated?.txHash) {
+        setApprovalTxHash(updated.txHash);
+      }
       setVerificationResult({
         found: true,
         ticket: updated,
         event: verificationResult.event,
         isValid: false,
-        isUsed: true
+        isUsed: true,
+        isOnChain: verificationResult.isOnChain
       });
     } catch (err) {
       setIsProcessingApproval(false);
@@ -188,7 +205,7 @@ export const VerifyTicketPage = () => {
             Ticket Verification Restricted
           </h1>
           <p className="text-sm text-slate-400 max-w-md mx-auto">
-            Turnstile admission scanning and ticket verification tools are restricted to authorized event organizers and gatekeepers.
+            Turnstile admission scanning and ticket verification tools are restricted to authorized event organizers and designated gatekeepers.
           </p>
         </div>
 
@@ -219,19 +236,27 @@ export const VerifyTicketPage = () => {
             </>
           ) : (
             <p className="text-slate-400 text-xs font-sans">
-              Connect your wallet using the Tixora Organizer Vault to verify tickets and admit attendees.
+              Connect your wallet using an authorized Organizer address to verify tickets and admit attendees.
             </p>
           )}
         </div>
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+          {/* Quick toggle for faculty / review presentation */}
+          <button
+            onClick={() => setOrganizerOverride(true)}
+            className="w-full sm:w-auto py-2.5 px-5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs shadow-glow-emerald transition-all flex items-center justify-center gap-2"
+          >
+            <ShieldCheck className="w-4 h-4" />
+            <span>Enable Organizer Mode (College Review)</span>
+          </button>
+
           {currentAccount ? (
             <button
               onClick={() => switchAccount('acc-3')}
-              className="w-full sm:w-auto py-2.5 px-5 rounded-xl bg-gradient-to-r from-brand-blue to-brand-cyan hover:from-blue-600 hover:to-cyan-400 text-white font-bold text-xs shadow-glow-cyan transition-all flex items-center justify-center gap-2"
+              className="w-full sm:w-auto py-2.5 px-5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-semibold text-xs border border-slate-700 transition-all flex items-center justify-center gap-2"
             >
-              <ShieldCheck className="w-4 h-4" />
-              <span>Switch to Organizer Wallet</span>
+              <span>Switch to Organizer Preset</span>
             </button>
           ) : (
             <button
@@ -253,17 +278,27 @@ export const VerifyTicketPage = () => {
     );
   }
 
+  // Find any minted on-chain ticket for quick presentation test
+  const onChainTicketSample = tickets.find(t => t.isOnChain);
+
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
       
       {/* Page Header */}
       <div className="space-y-2">
-        <DemoBadge text="GATE ADMISSION VERIFIER • SIMULATED SMART CONTRACT" />
+        <div className="flex items-center gap-2">
+          <DemoBadge text={isContractConfigured ? "ON-CHAIN GATE ADMISSION • SEPOLIA TESTNET" : "GATE ADMISSION VERIFIER • DEMO MODE"} />
+          {isContractConfigured && (
+            <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold">
+              SMART CONTRACT CONNECTED
+            </span>
+          )}
+        </div>
         <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
           Ticket Verification & Gate Admission
         </h1>
         <p className="text-sm text-slate-400 max-w-2xl">
-          Simulated turnstile validator. Inspects on-chain ticket status, checks ownership against the attendee, and marks tickets as USED to prevent duplicate admissions.
+          Turnstile validator inspecting on-chain ticket status, verifying ownership, and executing the smart contract's <code className="text-cyan-300 font-mono">useTicket()</code> method to permanently prevent duplicate entry.
         </p>
       </div>
 
@@ -284,7 +319,7 @@ export const VerifyTicketPage = () => {
             }`}
           >
             <Search className="w-4 h-4" />
-            <span>Enter Ticket ID</span>
+            <span>Enter Ticket / Token ID</span>
           </button>
 
           <button
@@ -311,7 +346,7 @@ export const VerifyTicketPage = () => {
                 <Search className="w-4 h-4 text-cyan-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
-                  placeholder="Enter Ticket ID (e.g. CP-TK-8021)"
+                  placeholder="Enter Ticket ID (e.g. 1, ONCHAIN-TK-1, or CP-TK-8021)"
                   value={inputTicketId}
                   onChange={(e) => setInputTicketId(e.target.value)}
                   className="w-full pl-10 pr-4 py-3 text-xs sm:text-sm font-mono bg-slate-950/80 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400"
@@ -320,11 +355,20 @@ export const VerifyTicketPage = () => {
 
               <button
                 type="submit"
-                disabled={!inputTicketId.trim()}
+                disabled={!inputTicketId.trim() || isVerifying}
                 className="py-3 px-6 rounded-xl font-bold text-xs bg-gradient-to-r from-brand-blue to-brand-cyan hover:from-blue-600 hover:to-cyan-400 text-white shadow-glow-blue transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                <ShieldCheck className="w-4 h-4" />
-                <span>Verify Ticket</span>
+                {isVerifying ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <span>Querying Blockchain...</span>
+                  </>
+                ) : (
+                  <>
+                    <ShieldCheck className="w-4 h-4" />
+                    <span>Verify Ticket</span>
+                  </>
+                )}
               </button>
             </form>
 
@@ -334,6 +378,17 @@ export const VerifyTicketPage = () => {
                 Quick Presentation Test Cases:
               </span>
               <div className="flex flex-wrap gap-2 text-xs">
+                {onChainTicketSample && (
+                  <button
+                    type="button"
+                    onClick={() => handleQuickTest(onChainTicketSample.id)}
+                    className="px-3 py-1.5 rounded-lg bg-amber-950/60 border border-amber-500/40 text-amber-300 hover:bg-amber-900/60 transition-colors flex items-center gap-1.5 font-mono"
+                  >
+                    <span className="w-2 h-2 rounded-full bg-amber-400" />
+                    <span>On-Chain Ticket: {onChainTicketSample.id}</span>
+                  </button>
+                )}
+
                 <button
                   type="button"
                   onClick={() => handleQuickTest('CP-TK-8021')}
@@ -341,15 +396,6 @@ export const VerifyTicketPage = () => {
                 >
                   <span className="w-2 h-2 rounded-full bg-emerald-400" />
                   <span>Valid Pass: CP-TK-8021</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleQuickTest('CP-TK-9412')}
-                  className="px-3 py-1.5 rounded-lg bg-emerald-950/60 border border-emerald-500/40 text-emerald-300 hover:bg-emerald-900/60 transition-colors flex items-center gap-1.5 font-mono"
-                >
-                  <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                  <span>Valid Pass: CP-TK-9412</span>
                 </button>
 
                 <button
@@ -380,7 +426,6 @@ export const VerifyTicketPage = () => {
         {activeTab === 'CAMERA' && (
           <div className="space-y-4">
             <div className="flex flex-col items-center justify-center p-6 rounded-2xl bg-slate-950/80 border border-slate-800">
-              
               <div 
                 id="reader" 
                 className="w-full max-w-sm rounded-xl overflow-hidden bg-black aspect-square flex items-center justify-center text-slate-500 text-xs"
@@ -437,7 +482,7 @@ export const VerifyTicketPage = () => {
                     </div>
                     <div>
                       <span className="text-[10px] font-mono font-bold tracking-widest text-emerald-400 uppercase">
-                        ON-CHAIN VALIDATION SUCCESS
+                        {verificationResult.isOnChain ? 'ON-CHAIN SMART CONTRACT VALIDATED' : 'SIMULATED LEDGER VALIDATED'}
                       </span>
                       <h3 className="text-2xl font-black text-white tracking-wide">
                         TICKET VERIFIED
@@ -477,8 +522,10 @@ export const VerifyTicketPage = () => {
                       <p className="text-slate-300">{verificationResult.ticket.eventDate} ({verificationResult.ticket.eventVenue})</p>
                     </div>
                     <div>
-                      <span className="text-slate-500 uppercase text-[10px] font-mono">Transaction Hash</span>
-                      <p className="font-mono text-purple-300 truncate text-[11px]">{verificationResult.ticket.txHash}</p>
+                      <span className="text-slate-500 uppercase text-[10px] font-mono">Network Source</span>
+                      <p className="font-mono text-purple-300 truncate text-[11px]">
+                        {verificationResult.isOnChain ? 'Ethereum Sepolia Testnet' : 'Simulated Ledger'}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -488,13 +535,19 @@ export const VerifyTicketPage = () => {
                   <button
                     onClick={handleApproveEntry}
                     disabled={isProcessingApproval}
-                    className="w-full py-4 px-6 rounded-xl font-bold text-sm bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 hover:from-emerald-500 hover:to-teal-500 text-white shadow-xl shadow-emerald-950/80 transition-all flex items-center justify-center gap-2 group"
+                    className="w-full py-4 px-6 rounded-xl font-bold text-sm bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 hover:from-emerald-500 hover:to-teal-500 text-white shadow-xl shadow-emerald-950/80 transition-all flex items-center justify-center gap-2 group disabled:opacity-50"
                   >
                     <CheckSquare className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                    <span>{isProcessingApproval ? 'Validating Turnstile...' : 'Approve Entry (Mark Ticket USED)'}</span>
+                    <span>
+                      {isProcessingApproval 
+                        ? (verificationResult.isOnChain ? 'Confirming in MetaMask...' : 'Validating Turnstile...') 
+                        : 'Approve Entry (Mark Ticket USED)'}
+                    </span>
                   </button>
                   <p className="text-[11px] text-slate-400 text-center mt-2 font-mono">
-                    Clicking Approve Entry updates ticket status on-chain to prevent duplicate scans.
+                    {verificationResult.isOnChain
+                      ? 'Submits on-chain useTicket() transaction to permanently lock this NFT ticket.'
+                      : 'Clicking Approve Entry updates ticket status on-chain to prevent duplicate scans.'}
                   </p>
                 </div>
               </div>
@@ -509,11 +562,25 @@ export const VerifyTicketPage = () => {
                 <div>
                   <h3 className="text-2xl font-black text-white">Entry Approved!</h3>
                   <p className="text-xs text-emerald-300 font-mono mt-1">
-                    Ticket {verificationResult.ticket.id} status successfully updated to USED in local blockchain state.
+                    Ticket {verificationResult.ticket.id} status successfully updated to USED {verificationResult.isOnChain ? 'on Ethereum Sepolia' : 'on-chain'}.
                   </p>
                 </div>
+                {approvalTxHash?.startsWith('0x') && (
+                  <div className="p-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs font-mono text-center">
+                    <span className="text-slate-400 text-[10px] block uppercase">Verification Tx Hash</span>
+                    <a
+                      href={`https://sepolia.etherscan.io/tx/${approvalTxHash}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-cyan-300 hover:underline inline-flex items-center gap-1 mt-0.5"
+                    >
+                      <span>{approvalTxHash.substring(0, 10)}...{approvalTxHash.substring(approvalTxHash.length - 8)}</span>
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </a>
+                  </div>
+                )}
                 <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800 text-xs text-slate-400 max-w-md mx-auto">
-                  Turnstile opened. Subsequent verification of this ticket will be strictly denied.
+                  Turnstile opened. Subsequent verification of this ticket will be strictly denied by the smart contract.
                 </div>
               </div>
             )}
@@ -589,7 +656,7 @@ export const VerifyTicketPage = () => {
                 </p>
 
                 <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-[11px] text-slate-400 font-mono">
-                  No corresponding ERC-721 token exists for identifier "{inputTicketId}". Please check the ticket number.
+                  No corresponding ERC-721 token exists for identifier "{inputTicketId}".
                 </div>
               </div>
             )}

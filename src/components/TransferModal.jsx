@@ -11,7 +11,8 @@ import {
   AlertTriangle,
   Layers,
   Copy,
-  Check
+  Check,
+  ExternalLink
 } from 'lucide-react';
 
 export const TransferModal = () => {
@@ -51,6 +52,11 @@ export const TransferModal = () => {
       return;
     }
 
+    if (ticket.status === 'USED') {
+      setError('Transfer Rejected: This ticket has already been used and redeemed at gate entry. Used tickets cannot be transferred.');
+      return;
+    }
+
     if (currentAccount && clean.toLowerCase() === currentAccount.address.toLowerCase()) {
       setError('Cannot transfer ticket to your own connected address.');
       return;
@@ -62,7 +68,6 @@ export const TransferModal = () => {
   const handleExecuteTransfer = async () => {
     try {
       setStage('PROCESSING');
-      await new Promise(r => setTimeout(r, 1800)); // simulate blockchain latency
 
       const result = await transferTicket({
         ticketId: ticket.id,
@@ -101,9 +106,16 @@ export const TransferModal = () => {
               <Send className="w-4 h-4" />
             </div>
             <div>
-              <span className="text-[10px] font-mono tracking-widest text-violet-400 uppercase font-semibold">
-                ERC-721 OWNERSHIP TRANSFER
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-mono tracking-widest text-violet-400 uppercase font-semibold">
+                  ERC-721 OWNERSHIP TRANSFER
+                </span>
+                {ticket.isOnChain && (
+                  <span className="px-1.5 py-0.2 text-[9px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded">
+                    ON-CHAIN
+                  </span>
+                )}
+              </div>
               <h3 className="text-base font-bold text-white">Transfer Digital Ticket</h3>
             </div>
           </div>
@@ -128,133 +140,131 @@ export const TransferModal = () => {
               <div className="flex-1 min-w-0">
                 <span className="text-[10px] font-mono text-cyan-300 font-semibold">{ticket.id}</span>
                 <h4 className="text-sm font-bold text-white truncate">{ticket.eventTitle}</h4>
-                <p className="text-xs text-slate-400">{ticket.tier} • {ticket.eventDate}</p>
+                <p className="text-xs text-slate-400">{ticket.eventDate} • {ticket.tier}</p>
+              </div>
+              <div className="text-right">
+                <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
+                  ticket.status === 'VALID' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                }`}>
+                  {ticket.status}
+                </span>
               </div>
             </div>
 
-            {/* Current Owner Info */}
-            <div className="p-3 rounded-lg bg-slate-950/70 border border-slate-800/90 text-xs">
-              <span className="text-slate-400 block text-[10px] uppercase font-mono">Current Owner (You)</span>
-              <p className="font-mono text-slate-200 truncate mt-0.5">{ticket.ownerAddress}</p>
-            </div>
+            {/* Anti-Scalping warning if USED */}
+            {ticket.status === 'USED' && (
+              <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 flex items-center gap-2.5 text-xs text-rose-300">
+                <ShieldAlert className="w-4 h-4 shrink-0 text-rose-400" />
+                <span>This ticket has already been used for entry and is permanently non-transferable.</span>
+              </div>
+            )}
 
-            {/* Recipient Address Input */}
+            {/* Recipient Form */}
             <form onSubmit={handleProceedToConfirm} className="space-y-3">
               <div>
-                <label className="text-xs font-semibold text-slate-200 block mb-1.5">
-                  Recipient Wallet Address (0x...)
+                <label className="text-xs font-semibold text-slate-300 block mb-1">
+                  Recipient Ethereum Wallet Address
                 </label>
                 <input
                   type="text"
                   placeholder="0x48B273570Fcf6E91A1A866A238B57D0b89a31C04"
                   value={toAddress}
-                  onChange={(e) => {
+                  disabled={ticket.status === 'USED'}
+                  onChange={e => {
                     setToAddress(e.target.value);
                     setError('');
                   }}
-                  className="w-full px-3.5 py-2.5 text-xs font-mono bg-slate-950 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-violet-400 focus:ring-1 focus:ring-violet-400"
+                  className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-700 rounded-xl font-mono text-xs text-white focus:outline-none focus:border-violet-400 disabled:opacity-50"
                 />
-                {error && <p className="text-xs text-rose-400 mt-1">{error}</p>}
               </div>
 
-              {/* Quick Select Demo Wallets */}
+              {/* Quick Select Demo Recipient */}
               <div>
-                <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide block mb-1.5">
-                  Quick Select Demo Peer Wallets
+                <span className="text-[11px] text-slate-400 block mb-1.5 font-medium">
+                  Or select demonstration peer:
                 </span>
                 <div className="grid grid-cols-2 gap-2">
                   {demoAccounts
-                    .filter(a => a.address.toLowerCase() !== ticket.ownerAddress.toLowerCase())
+                    .filter(a => a.address.toLowerCase() !== currentAccount?.address.toLowerCase())
+                    .slice(0, 2)
                     .map(acc => (
                       <button
                         key={acc.id}
                         type="button"
                         onClick={() => handleSelectDemoAccount(acc)}
-                        className={`p-2 rounded-lg border text-left text-xs transition-colors ${
+                        className={`p-2 rounded-lg border text-left text-xs transition-colors flex items-center gap-2 ${
                           toAddress.toLowerCase() === acc.address.toLowerCase()
-                            ? 'bg-violet-600/20 border-violet-400 text-white'
-                            : 'bg-slate-900/60 border-slate-800 hover:bg-slate-800/80 text-slate-300'
+                            ? 'bg-violet-600/30 border-violet-400 text-white'
+                            : 'bg-slate-900/60 border-slate-800 text-slate-300 hover:border-slate-700'
                         }`}
                       >
-                        <p className="font-semibold truncate">{acc.name}</p>
-                        <p className="font-mono text-[10px] text-slate-400 truncate">{acc.shortAddress}</p>
+                        <img src={acc.avatar} alt={acc.name} className="w-5 h-5 rounded-full object-cover" />
+                        <span className="truncate">{acc.name.split(' ')[0]} ({acc.shortAddress})</span>
                       </button>
                     ))}
                 </div>
               </div>
 
-              {/* Warning Notice */}
-              <div className="p-3 rounded-lg bg-amber-950/30 border border-amber-500/30 text-amber-200/90 text-[11px] leading-relaxed flex items-start gap-2">
-                <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-                <span>
-                  Every transfer updates the ticket's ownership record. Once transferred, you will no longer be able to use or present this ticket for venue entry.
-                </span>
-              </div>
+              {error && (
+                <div className="p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 shrink-0 text-rose-400" />
+                  <span>{error}</span>
+                </div>
+              )}
 
-              {/* Proceed Button */}
-              <button
-                type="submit"
-                className="w-full py-2.5 px-4 rounded-xl font-bold text-xs bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white shadow-glow-violet transition-all flex items-center justify-center gap-2"
-              >
-                <span>Review & Confirm Transfer</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  disabled={ticket.status === 'USED' || !toAddress.trim()}
+                  className="w-full py-2.5 px-4 rounded-xl font-bold text-xs bg-violet-600 hover:bg-violet-500 text-white shadow-glow-purple transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <span>Review Transfer Details</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
             </form>
           </div>
         )}
 
-        {/* 2. CONFIRMATION STAGE */}
+        {/* 2. CONFIRM STAGE */}
         {stage === 'CONFIRM' && (
           <div className="py-4 space-y-4">
-            <div className="text-center">
-              <h4 className="text-base font-bold text-white">Confirm Ownership Transfer</h4>
-              <p className="text-xs text-slate-400 mt-0.5">
-                Please verify the transaction details before signing.
+            <div className="p-3.5 rounded-xl bg-violet-950/30 border border-violet-500/30 space-y-2.5 text-xs">
+              <h4 className="font-bold text-white text-sm">Verify Transfer Intent</h4>
+              <p className="text-slate-300 leading-relaxed">
+                Smart contract ownership of NFT <code className="text-cyan-300 font-mono">{ticket.id}</code> will be reassigned irrevocably.
               </p>
-            </div>
-
-            <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 space-y-2.5 text-xs">
-              <div className="flex items-center justify-between pb-2 border-b border-slate-800/80">
-                <span className="text-slate-400">Ticket ID</span>
-                <span className="font-mono text-cyan-300 font-bold">{ticket.id}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-slate-400">Event</span>
-                <span className="font-semibold text-white truncate max-w-[220px]">{ticket.eventTitle}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-slate-400">Current Owner</span>
-                <span className="font-mono text-slate-300">{ticket.ownerAddress.substring(0, 6)}...{ticket.ownerAddress.substring(38)}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-slate-400">New Recipient</span>
-                <span className="font-mono text-emerald-400 font-bold">{toAddress.substring(0, 6)}...{toAddress.substring(38)}</span>
-              </div>
-              <div className="flex items-center justify-between pt-2 border-t border-slate-800/80">
-                <span className="text-slate-400">Gas Fee Estimate</span>
-                <span className="font-mono text-purple-300">0.00085 ETH (Simulated)</span>
+              <div className="pt-2 border-t border-slate-800 space-y-1 font-mono text-[11px]">
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Current Owner:</span>
+                  <span className="text-slate-300 truncate max-w-[200px]">{currentAccount?.address}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">New Owner:</span>
+                  <span className="text-emerald-400 truncate max-w-[200px]">{toAddress}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Network:</span>
+                  <span className="text-purple-300">{ticket.isOnChain ? 'Ethereum Sepolia Testnet' : 'Simulated'}</span>
+                </div>
               </div>
             </div>
 
-            <div className="p-3 rounded-lg bg-blue-950/40 border border-blue-500/30 text-blue-200 text-xs italic text-center">
-              "Every transfer updates the ticket's ownership record."
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 pt-2">
+            <div className="flex gap-2">
               <button
                 type="button"
                 onClick={() => setStage('INPUT')}
-                className="py-2.5 px-3 rounded-xl border border-slate-700 bg-slate-900 hover:bg-slate-800 text-xs font-semibold text-slate-300 transition-colors"
+                className="flex-1 py-2.5 px-3 rounded-xl border border-slate-700 bg-slate-900/60 hover:bg-slate-800 text-xs font-semibold text-slate-300"
               >
-                Back / Edit
+                Back
               </button>
               <button
                 type="button"
                 onClick={handleExecuteTransfer}
-                className="py-2.5 px-3 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-xs font-bold text-white shadow-glow-violet transition-all flex items-center justify-center gap-1.5"
+                className="flex-1 py-2.5 px-4 rounded-xl font-bold text-xs bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white shadow-glow-purple flex items-center justify-center gap-1.5"
               >
-                <span>Authorize Transfer</span>
-                <Send className="w-3.5 h-3.5" />
+                <span>Execute Transfer</span>
+                <ArrowRight className="w-4 h-4" />
               </button>
             </div>
           </div>
@@ -262,12 +272,14 @@ export const TransferModal = () => {
 
         {/* 3. PROCESSING STAGE */}
         {stage === 'PROCESSING' && (
-          <div className="py-12 flex flex-col items-center justify-center text-center space-y-4">
-            <div className="w-16 h-16 rounded-full border-4 border-violet-500/20 border-t-violet-400 animate-spin flex items-center justify-center shadow-glow-violet" />
+          <div className="py-10 flex flex-col items-center justify-center text-center space-y-4">
+            <div className="w-16 h-16 rounded-full border-4 border-violet-500/20 border-t-violet-400 animate-spin flex items-center justify-center" />
             <div>
-              <h4 className="text-base font-bold text-white">Broadcasting Transfer to Sepolia...</h4>
-              <p className="text-xs text-slate-400 max-w-xs mx-auto mt-1">
-                Updating ERC-721 token ownership registry and generating cryptographic transfer receipt.
+              <h4 className="text-base font-bold text-white">Broadcasting Transfer Transaction...</h4>
+              <p className="text-xs text-slate-400 mt-1 max-w-xs">
+                {ticket.isOnChain 
+                  ? 'Please confirm the transfer in MetaMask. Ethers.js is awaiting Sepolia block confirmation.' 
+                  : 'Updating ERC-721 token ownership registry and generating transfer receipt.'}
               </p>
             </div>
           </div>
@@ -283,7 +295,7 @@ export const TransferModal = () => {
             <div>
               <h4 className="text-base font-bold text-white">Transfer Completed!</h4>
               <p className="text-xs text-emerald-300 mt-0.5">
-                Ticket ownership successfully reassigned to new address.
+                Ticket ownership successfully reassigned on the blockchain.
               </p>
             </div>
 
@@ -296,17 +308,27 @@ export const TransferModal = () => {
                 <span className="text-slate-400">New On-Chain Owner</span>
                 <span className="font-mono text-emerald-400 truncate max-w-[220px]">{toAddress}</span>
               </div>
-              {txDetails && (
+              {txDetails?.txHash && (
                 <div className="flex justify-between pt-1 border-t border-slate-800">
                   <span className="text-slate-400">Transaction Hash</span>
-                  <span className="font-mono text-purple-300 truncate max-w-[200px]">{txDetails.txHash}</span>
+                  {txDetails.isOnChain && txDetails.txHash.startsWith('0x') ? (
+                    <a
+                      href={`https://sepolia.etherscan.io/tx/${txDetails.txHash}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-mono text-cyan-300 hover:underline flex items-center gap-1 text-[11px] truncate max-w-[200px]"
+                    >
+                      <span className="truncate">{txDetails.txHash}</span>
+                      <ExternalLink className="w-3 h-3 shrink-0" />
+                    </a>
+                  ) : (
+                    <span className="font-mono text-purple-300 truncate max-w-[200px] text-[11px]">
+                      {txDetails.txHash}
+                    </span>
+                  )}
                 </div>
               )}
             </div>
-
-            <p className="text-xs text-slate-400 italic">
-              "Every transfer updates the ticket's ownership record."
-            </p>
 
             <button
               onClick={handleClose}

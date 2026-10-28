@@ -171,11 +171,11 @@ export const EventDetailsPage = () => {
               <div>
                 <span className="text-xs text-slate-400">Standard Pass</span>
                 <p className="text-2xl sm:text-3xl font-black text-cyan-400 mt-0.5">
-                  ₹{event.price.toLocaleString()}
+                  {event.isOnChain ? (event.priceEth || '0.0001 ETH') : `₹${event.price.toLocaleString()}`}
                 </p>
               </div>
               <span className="text-xs font-mono px-2.5 py-1 rounded-full bg-blue-950 text-blue-300 border border-blue-500/30">
-                INR Fiat Price
+                {event.isOnChain ? 'Sepolia ETH' : 'INR Fiat Price'}
               </span>
             </div>
 
@@ -225,8 +225,12 @@ export const EventDetailsPage = () => {
                   Blockchain Record
                 </h4>
               </div>
-              <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-cyan-950/80 text-cyan-400 border border-cyan-500/30">
-                PROTOTYPE DATA
+              <span className={`text-[9px] font-mono px-1.5 py-0.5 rounded border ${
+                event.isOnChain 
+                  ? 'bg-amber-950/80 text-amber-300 border-amber-500/40' 
+                  : 'bg-cyan-950/80 text-cyan-400 border-cyan-500/30'
+              }`}>
+                {event.isOnChain ? 'ON-CHAIN' : 'DEMO LEDGER'}
               </span>
             </div>
 
@@ -247,7 +251,7 @@ export const EventDetailsPage = () => {
               </div>
 
               <div className="pt-2 border-t border-slate-800">
-                <span className="text-slate-400 block text-[10px] uppercase mb-1">Contract Address Placeholder</span>
+                <span className="text-slate-400 block text-[10px] uppercase mb-1">Contract Address</span>
                 <div className="flex items-center justify-between p-2 rounded-lg bg-slate-950 border border-slate-800">
                   <span className="text-[11px] text-slate-300 truncate max-w-[200px]">
                     {event.contractAddress}

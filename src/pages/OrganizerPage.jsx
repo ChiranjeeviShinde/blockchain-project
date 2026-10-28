@@ -15,10 +15,14 @@ import {
   Cpu, 
   Eye, 
   Sparkles, 
-  Layers,
-  ArrowRight,
-  ShieldCheck,
-  AlertCircle,
+  Layers, 
+  ArrowRight, 
+  ShieldCheck, 
+  AlertCircle, 
+  ExternalLink,
+  Settings2,
+  Globe,
+  RefreshCw,
   Image as ImageIcon
 } from 'lucide-react';
 
@@ -39,8 +43,15 @@ export const OrganizerPage = () => {
     createEvent, 
     currentAccount, 
     isOrganizer, 
+    organizerOverride,
+    setOrganizerOverride,
     switchAccount, 
-    setIsWalletModalOpen 
+    setIsWalletModalOpen,
+    contractAddress,
+    isContractConfigured,
+    contractOwner,
+    isSepolia,
+    refreshOnChainData
   } = useBlockchain();
 
   // Active sub-view: 'OVERVIEW' | 'CREATE_EVENT'
@@ -55,12 +66,14 @@ export const OrganizerPage = () => {
     time: '10:00 AM - 05:00 PM IST',
     venue: '',
     price: 999,
+    priceEth: '0.0001',
     totalTickets: 200,
     image: PRESET_IMAGES[0].url
   });
 
   const [deploymentState, setDeploymentState] = useState('IDLE'); // 'IDLE' | 'COMPILING' | 'DEPLOYING' | 'SUCCESS'
   const [deployedEvent, setDeployedEvent] = useState(null);
+  const [errorMessage, setErrorMessage] = useState('');
 
   // Computed metrics
   const totalEvents = events.length;
@@ -71,12 +84,12 @@ export const OrganizerPage = () => {
   const totalRevenueInr = events.reduce((sum, e) => sum + (e.soldTickets * e.price), 0);
 
   const statCards = [
-    { title: 'Total Events', value: totalEvents, sub: 'Active Contracts', icon: Layers, color: 'text-blue-400' },
-    { title: 'Tickets Sold', value: totalTicketsSold.toLocaleString(), sub: 'ERC-721 Tokens', icon: Ticket, color: 'text-cyan-400' },
-    { title: 'Active Tickets', value: activeTicketsCount, sub: 'Valid Gate Passes', icon: CheckCircle2, color: 'text-emerald-400' },
-    { title: 'Used Tickets', value: usedTicketsCount, sub: 'Redeemed at Gates', icon: ShieldCheck, color: 'text-amber-400' },
-    { title: 'Transfers', value: transfersCount, sub: 'P2P Chain Transfers', icon: Send, color: 'text-purple-400' },
-    { title: 'Demo Revenue', value: `₹${totalRevenueInr.toLocaleString()}`, sub: 'Ticket Inflow', icon: IndianRupee, color: 'text-teal-400' },
+    { title: 'Total Events', value: totalEvents, sub: isContractConfigured ? 'Sepolia & Local' : 'Active Events', icon: Layers, color: 'text-blue-400' },
+    { title: 'Tickets Sold', value: totalTicketsSold.toLocaleString(), sub: 'ERC-721 Passes', icon: Ticket, color: 'text-cyan-400' },
+    { title: 'Active Tickets', value: activeTicketsCount, sub: 'Valid Passes', icon: CheckCircle2, color: 'text-emerald-400' },
+    { title: 'Used Tickets', value: usedTicketsCount, sub: 'Gate Redemptions', icon: ShieldCheck, color: 'text-amber-400' },
+    { title: 'Transfers', value: transfersCount, sub: 'P2P Ownership Transfers', icon: Send, color: 'text-purple-400' },
+    { title: 'Total Inflow', value: `₹${totalRevenueInr.toLocaleString()}`, sub: 'Contract Volume', icon: IndianRupee, color: 'text-teal-400' },
   ];
 
   const handleCreateSubmit = async (e) => {
@@ -86,18 +99,16 @@ export const OrganizerPage = () => {
       return;
     }
 
+    setErrorMessage('');
+
     try {
-      setDeploymentState('COMPILING');
-      await new Promise(r => setTimeout(r, 1000));
-
       setDeploymentState('DEPLOYING');
-      await new Promise(r => setTimeout(r, 1600));
-
-      const created = createEvent(formData);
+      const created = await createEvent(formData);
       setDeployedEvent(created);
       setDeploymentState('SUCCESS');
     } catch (err) {
-      alert(err.message);
+      console.error(err);
+      setErrorMessage(err.message || 'Event creation failed.');
       setDeploymentState('IDLE');
     }
   };
@@ -111,11 +122,13 @@ export const OrganizerPage = () => {
       time: '10:00 AM - 05:00 PM IST',
       venue: '',
       price: 999,
+      priceEth: '0.0001',
       totalTickets: 200,
       image: PRESET_IMAGES[0].url
     });
     setDeploymentState('IDLE');
     setDeployedEvent(null);
+    setErrorMessage('');
     setActiveView('OVERVIEW');
   };
 
@@ -131,43 +144,49 @@ export const OrganizerPage = () => {
             Organizer Dashboard Restricted
           </h1>
           <p className="text-sm text-slate-400 max-w-md mx-auto">
-            This dashboard is only visible and accessible to authorized event organizers and smart contract deployers.
+            This dashboard is restricted to authorized event organizers and smart contract deployers.
           </p>
         </div>
 
-        <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800 text-xs font-mono max-w-md mx-auto text-left space-y-2.5">
-          <div className="flex items-center justify-between text-slate-400">
-            <span>Connected Account:</span>
-            <span className={currentAccount ? 'text-cyan-300 font-bold' : 'text-rose-400 font-bold'}>
-              {currentAccount ? currentAccount.name : 'Disconnected'}
-            </span>
+        {/* Authorization Rules Explanatory Box */}
+        <div className="p-4 rounded-xl bg-slate-900/90 border border-slate-800 text-xs font-mono max-w-md mx-auto text-left space-y-2.5">
+          <span className="text-[10px] text-cyan-400 uppercase tracking-wider block font-bold">
+            Smart Contract Authorization Rules:
+          </span>
+          <ul className="list-disc list-inside space-y-1 text-slate-300 font-sans text-xs">
+            <li><strong className="text-white">Contract Owner:</strong> Deployer of BlockTix.sol on Sepolia.</li>
+            <li><strong className="text-white">Event Organizer:</strong> Creator address registered with event.</li>
+            <li><strong className="text-white">Designated Verifier:</strong> Authorized via <code className="text-cyan-300 font-mono">setVerifier()</code>.</li>
+          </ul>
+
+          <div className="pt-2 border-t border-slate-800 text-slate-400 text-xs space-y-1 font-mono">
+            <div className="flex justify-between">
+              <span>Connected Address:</span>
+              <span className="text-slate-200">{currentAccount ? currentAccount.shortAddress : 'None'}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Access Status:</span>
+              <span className="text-rose-400 font-bold">Access Denied</span>
+            </div>
           </div>
-          {currentAccount ? (
-            <>
-              <div className="flex items-center justify-between text-slate-400">
-                <span>Role:</span>
-                <span className="text-amber-400 font-semibold">{currentAccount.role || 'ATTENDEE'}</span>
-              </div>
-              <div className="flex items-center justify-between text-slate-400">
-                <span>Address:</span>
-                <span className="text-slate-300">{currentAccount.shortAddress}</span>
-              </div>
-            </>
-          ) : (
-            <p className="text-slate-400 text-xs font-sans">
-              Connect your wallet using the Tixora Organizer Vault to deploy contracts and manage ticket allocations.
-            </p>
-          )}
         </div>
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+          {/* Faculty / Project Review One-Click Authorization */}
+          <button
+            onClick={() => setOrganizerOverride(true)}
+            className="w-full sm:w-auto py-2.5 px-5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs shadow-glow-emerald transition-all flex items-center justify-center gap-2"
+          >
+            <ShieldCheck className="w-4 h-4" />
+            <span>Enable Organizer Mode (College Review)</span>
+          </button>
+
           {currentAccount ? (
             <button
               onClick={() => switchAccount('acc-3')}
-              className="w-full sm:w-auto py-2.5 px-5 rounded-xl bg-gradient-to-r from-brand-blue to-brand-cyan hover:from-blue-600 hover:to-cyan-400 text-white font-bold text-xs shadow-glow-cyan transition-all flex items-center justify-center gap-2"
+              className="w-full sm:w-auto py-2.5 px-5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-semibold text-xs border border-slate-700 transition-all flex items-center justify-center gap-2"
             >
-              <LayoutDashboard className="w-4 h-4" />
-              <span>Switch to Organizer Wallet</span>
+              <span>Switch to Organizer Preset</span>
             </button>
           ) : (
             <button
@@ -195,12 +214,19 @@ export const OrganizerPage = () => {
       {/* Top Banner */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div className="space-y-2">
-          <DemoBadge text="ORGANIZER ADMIN & CONTRACT DEPLOYER • ERC-721" />
+          <div className="flex items-center gap-2">
+            <DemoBadge text={isContractConfigured ? "ORGANIZER ADMIN • LIVE SEPOLIA SMART CONTRACT" : "ORGANIZER ADMIN • DEMO SIMULATION"} />
+            {isContractConfigured && (
+              <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold">
+                SEPOLIA ON-CHAIN
+              </span>
+            )}
+          </div>
           <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
             Organizer Dashboard
           </h1>
           <p className="text-sm text-slate-400 max-w-2xl">
-            Deploy ERC-721 event ticket smart contracts, monitor sales volume, and audit gate entrance throughput in real-time.
+            Register ERC-721 event contracts on Ethereum Sepolia, monitor ticket mint volumes, and audit gate entrance throughput in real-time.
           </p>
         </div>
 
@@ -221,6 +247,7 @@ export const OrganizerPage = () => {
             onClick={() => {
               setActiveView('CREATE_EVENT');
               setDeploymentState('IDLE');
+              setErrorMessage('');
             }}
             className={`py-2 px-4 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
               activeView === 'CREATE_EVENT'
@@ -230,6 +257,51 @@ export const OrganizerPage = () => {
           >
             <PlusCircle className="w-4 h-4" />
             <span>Create Event</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Contract & Network Status Card */}
+      <div className="p-4 rounded-2xl glass-panel border border-cyan-500/30 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div className="space-y-1">
+          <span className="text-[10px] text-slate-400 uppercase font-mono tracking-wider">
+            Smart Contract Architecture
+          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-bold text-white font-mono">
+              {isContractConfigured ? contractAddress : 'Demo Mode (No Sepolia contract address configured)'}
+            </span>
+            {isContractConfigured && (
+              <a
+                href={`https://sepolia.etherscan.io/address/${contractAddress}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-cyan-400 hover:underline flex items-center gap-1 text-xs"
+              >
+                <span>Etherscan</span>
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            )}
+          </div>
+          <p className="text-xs text-slate-400">
+            Standard: <span className="text-cyan-300 font-mono">ERC-721 + ReentrancyGuard + Ownable</span> • Network: <span className="text-purple-300 font-mono">Sepolia Testnet (11155111)</span>
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={() => setIsWalletModalOpen(true)}
+            className="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs text-slate-200 transition-colors flex items-center gap-1.5"
+          >
+            <Settings2 className="w-3.5 h-3.5 text-cyan-400" />
+            <span>Configure Contract</span>
+          </button>
+          <button
+            onClick={refreshOnChainData}
+            title="Refresh on-chain data"
+            className="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 transition-colors"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
           </button>
         </div>
       </div>
@@ -253,94 +325,84 @@ export const OrganizerPage = () => {
           </div>
 
           {/* Events Management Table */}
-          <div className="glass-panel rounded-2xl border border-white/[0.08] overflow-hidden space-y-4 p-5 sm:p-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-800">
+          <div className="glass-panel rounded-2xl border border-white/[0.08] overflow-hidden space-y-4">
+            <div className="p-5 border-b border-slate-800/80 flex items-center justify-between">
               <div>
-                <h3 className="text-base font-bold text-white tracking-wide">
-                  Events Management Registry
-                </h3>
-                <p className="text-xs text-slate-400">
-                  On-chain deployed smart contracts and allocation telemetry
-                </p>
+                <h3 className="text-base font-bold text-white">Active Event Smart Contracts</h3>
+                <p className="text-xs text-slate-400">Deployed events and on-chain ticket sales allocations.</p>
               </div>
               <button
                 onClick={() => setActiveView('CREATE_EVENT')}
-                className="py-2 px-3.5 rounded-xl text-xs font-bold bg-blue-600/30 text-cyan-300 border border-cyan-400/40 hover:bg-blue-600/50 transition-colors flex items-center gap-1.5 self-start sm:self-auto"
+                className="py-1.5 px-3 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white flex items-center gap-1.5"
               >
                 <PlusCircle className="w-3.5 h-3.5" />
-                <span>Deploy New Event</span>
+                <span>New Event</span>
               </button>
             </div>
 
-            {/* Table */}
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
-                <thead>
-                  <tr className="border-b border-slate-800 text-[11px] font-mono text-slate-400 uppercase">
-                    <th className="py-3 px-3">Event</th>
-                    <th className="py-3 px-3">Date</th>
-                    <th className="py-3 px-3">Price</th>
-                    <th className="py-3 px-3">Total</th>
-                    <th className="py-3 px-3">Sold</th>
-                    <th className="py-3 px-3">Available</th>
-                    <th className="py-3 px-3">Status</th>
-                    <th className="py-3 px-3 text-right">Actions</th>
+                <thead className="bg-slate-950/60 text-slate-400 uppercase font-mono text-[10px] border-b border-slate-800">
+                  <tr>
+                    <th className="p-4">Event</th>
+                    <th className="p-4">Category</th>
+                    <th className="p-4">Date</th>
+                    <th className="p-4">Sold / Capacity</th>
+                    <th className="p-4">Price</th>
+                    <th className="p-4">Source</th>
+                    <th className="p-4 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800/60 font-mono">
-                  {events.map(ev => {
-                    const available = Math.max(0, ev.totalTickets - ev.soldTickets);
+                <tbody className="divide-y divide-slate-800/60">
+                  {events.map((event) => {
+                    const percentSold = Math.round((event.soldTickets / event.totalTickets) * 100);
                     return (
-                      <tr key={ev.id} className="hover:bg-slate-900/50 transition-colors group">
-                        <td className="py-3 px-3">
-                          <div className="flex items-center gap-2.5">
+                      <tr key={event.id} className="hover:bg-slate-900/40 transition-colors">
+                        <td className="p-4">
+                          <div className="flex items-center gap-3">
                             <img
-                              src={ev.image}
-                              alt={ev.title}
-                              className="w-8 h-8 rounded-lg object-cover shrink-0 border border-slate-700"
+                              src={event.image}
+                              alt={event.title}
+                              className="w-10 h-10 rounded-lg object-cover border border-slate-800"
                             />
                             <div>
-                              <p className="font-bold font-sans text-white group-hover:text-cyan-300 transition-colors truncate max-w-[180px]">
-                                {ev.title}
-                              </p>
-                              <span className="text-[10px] text-cyan-400/80">{ev.id}</span>
+                              <p className="font-bold text-white truncate max-w-xs">{event.title}</p>
+                              <p className="font-mono text-[10px] text-cyan-400">{event.id}</p>
                             </div>
                           </div>
                         </td>
-
-                        <td className="py-3 px-3 text-slate-300">
-                          {ev.formattedDate}
+                        <td className="p-4 text-slate-300">{event.category}</td>
+                        <td className="p-4 text-slate-300 whitespace-nowrap">{event.formattedDate}</td>
+                        <td className="p-4">
+                          <div>
+                            <span className="font-mono text-white font-semibold">
+                              {event.soldTickets} / {event.totalTickets}
+                            </span>
+                            <div className="w-24 bg-slate-800 h-1.5 rounded-full mt-1 overflow-hidden">
+                              <div 
+                                className="bg-cyan-400 h-full rounded-full transition-all"
+                                style={{ width: `${percentSold}%` }}
+                              />
+                            </div>
+                          </div>
                         </td>
-
-                        <td className="py-3 px-3 font-bold text-cyan-300">
-                          ₹{ev.price.toLocaleString()}
+                        <td className="p-4 font-mono font-semibold text-cyan-300 whitespace-nowrap">
+                          {event.isOnChain ? (event.priceEth || '0.0001 ETH') : `₹${event.price.toLocaleString()}`}
                         </td>
-
-                        <td className="py-3 px-3 text-slate-400">
-                          {ev.totalTickets}
-                        </td>
-
-                        <td className="py-3 px-3 font-semibold text-emerald-400">
-                          {ev.soldTickets}
-                        </td>
-
-                        <td className="py-3 px-3 text-slate-300">
-                          {available}
-                        </td>
-
-                        <td className="py-3 px-3">
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-950/80 text-emerald-300 border border-emerald-500/30">
-                            ● {ev.status}
+                        <td className="p-4">
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
+                            event.isOnChain ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+                          }`}>
+                            {event.isOnChain ? 'ON-CHAIN' : 'DEMO'}
                           </span>
                         </td>
-
-                        <td className="py-3 px-3 text-right space-x-1.5 font-sans">
+                        <td className="p-4 text-right">
                           <button
-                            onClick={() => navigate(`/events/${ev.id}`)}
+                            onClick={() => navigate(`/events/${event.id}`)}
                             className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors"
-                            title="View Public Event Page"
+                            title="View Event Details"
                           >
-                            <Eye className="w-3.5 h-3.5 text-cyan-400" />
+                            <Eye className="w-3.5 h-3.5" />
                           </button>
                         </td>
                       </tr>
@@ -358,11 +420,18 @@ export const OrganizerPage = () => {
         <div className="max-w-3xl mx-auto glass-panel rounded-2xl p-6 sm:p-8 border border-white/[0.08] space-y-6">
           <div className="flex items-center justify-between pb-4 border-b border-slate-800">
             <div>
-              <span className="text-[11px] font-mono text-cyan-400 uppercase font-semibold">
-                SMART CONTRACT COMPILER & DEPLOYER
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-mono text-cyan-400 uppercase font-semibold">
+                  SMART CONTRACT COMPILER & DEPLOYER
+                </span>
+                {isContractConfigured && currentAccount?.isMetaMask && (
+                  <span className="px-1.5 py-0.2 text-[9px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded">
+                    SEPOLIA TESTNET
+                  </span>
+                )}
+              </div>
               <h2 className="text-xl font-bold text-white mt-0.5">
-                Create & Deploy Event Pass Contract
+                Register Event on Blockchain
               </h2>
             </div>
             <button
@@ -372,6 +441,13 @@ export const OrganizerPage = () => {
               Cancel
             </button>
           </div>
+
+          {errorMessage && (
+            <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
+              <span>{errorMessage}</span>
+            </div>
+          )}
 
           {/* Form */}
           {deploymentState === 'IDLE' && (
@@ -461,10 +537,23 @@ export const OrganizerPage = () => {
               </div>
 
               {/* Price & Quantity */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="text-xs font-semibold text-slate-300 block mb-1">
-                    Ticket Price (INR ₹)
+                    Price in Sepolia ETH
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="0.0001"
+                    value={formData.priceEth}
+                    onChange={(e) => setFormData({ ...formData, priceEth: e.target.value })}
+                    className="w-full px-3.5 py-2 text-xs bg-slate-950/80 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-cyan-400 font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-slate-300 block mb-1">
+                    Display Price (INR ₹)
                   </label>
                   <input
                     type="number"
@@ -477,7 +566,7 @@ export const OrganizerPage = () => {
 
                 <div>
                   <label className="text-xs font-semibold text-slate-300 block mb-1">
-                    Total Ticket Supply (Mint Cap)
+                    Total Mint Cap (Supply)
                   </label>
                   <input
                     type="number"
@@ -489,7 +578,7 @@ export const OrganizerPage = () => {
                 </div>
               </div>
 
-              {/* Cover Image URL & Quick Pickers */}
+              {/* Cover Image URL */}
               <div className="space-y-2">
                 <label className="text-xs font-semibold text-slate-300 block">
                   Event Cover Image
@@ -501,9 +590,8 @@ export const OrganizerPage = () => {
                   className="w-full px-3.5 py-2 text-xs bg-slate-950/80 border border-slate-800 rounded-xl text-slate-200 focus:outline-none focus:border-cyan-400"
                 />
                 
-                {/* Preset image buttons */}
                 <div>
-                  <span className="text-[10px] font-mono text-slate-400 uppercase">Or pick a preset theme:</span>
+                  <span className="text-[10px] font-mono text-slate-400 uppercase">Or select theme preset:</span>
                   <div className="flex flex-wrap gap-2 mt-1">
                     {PRESET_IMAGES.map((preset, i) => (
                       <button
@@ -530,24 +618,26 @@ export const OrganizerPage = () => {
                   className="w-full py-3.5 px-4 rounded-xl font-bold text-xs bg-gradient-to-r from-brand-blue via-blue-600 to-brand-cyan hover:from-blue-600 hover:to-cyan-400 text-white shadow-glow-blue transition-all flex items-center justify-center gap-2"
                 >
                   <Cpu className="w-4 h-4" />
-                  <span>Deploy ERC-721 Contract & Publish Event</span>
+                  <span>
+                    {isContractConfigured && currentAccount?.isMetaMask
+                      ? 'Submit Event Transaction to Sepolia Blockchain'
+                      : 'Create Event (Demo Mode)'}
+                  </span>
                 </button>
               </div>
             </form>
           )}
 
           {/* Deployment Animation */}
-          {(deploymentState === 'COMPILING' || deploymentState === 'DEPLOYING') && (
+          {deploymentState === 'DEPLOYING' && (
             <div className="py-12 flex flex-col items-center justify-center text-center space-y-4">
               <div className="w-16 h-16 rounded-full border-4 border-blue-500/20 border-t-cyan-400 animate-spin flex items-center justify-center shadow-glow-cyan" />
               <div>
                 <h4 className="text-base font-bold text-white">
-                  {deploymentState === 'COMPILING' ? 'Compiling ERC-721 Smart Contract...' : 'Broadcasting Contract Bytecode to EVM Testnet...'}
+                  Broadcasting Event Transaction to EVM Blockchain...
                 </h4>
                 <p className="text-xs text-slate-400 max-w-sm mx-auto mt-1">
-                  {deploymentState === 'COMPILING' 
-                    ? 'Synthesizing OpenZeppelin ERC-721 standard with non-fungible ticket minting functions.'
-                    : 'Allocating contract address and creating genesis block entry.'}
+                  Please review and confirm transaction in MetaMask. Ethers.js is recording event specifications on Sepolia.
                 </p>
               </div>
             </div>
@@ -560,9 +650,9 @@ export const OrganizerPage = () => {
                 <CheckCircle2 className="w-7 h-7" />
               </div>
               <div>
-                <h4 className="text-lg font-bold text-white">Event Contract Successfully Deployed!</h4>
+                <h4 className="text-lg font-bold text-white">Event Registered Successfully!</h4>
                 <p className="text-xs text-emerald-300 mt-0.5">
-                  The event is now active on the Tixora explore marketplace.
+                  The event is live and available on the BlockTix marketplace.
                 </p>
               </div>
 

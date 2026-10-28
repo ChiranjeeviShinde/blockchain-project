@@ -13,7 +13,9 @@ import {
   ExternalLink,
   Layers,
   Copy,
-  Check
+  Check,
+  AlertTriangle,
+  RefreshCw
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -24,21 +26,29 @@ export const PurchaseModal = () => {
     currentAccount, 
     setIsWalletModalOpen,
     purchaseTicket,
-    setDetailModalTicket
+    networkChainId,
+    isSepolia,
+    switchToSepoliaNetwork,
+    contractAddress,
+    isContractConfigured,
   } = useBlockchain();
 
   const navigate = useNavigate();
 
-  // purchase state: 'IDLE' | 'CONFIRMING' | 'MINTING' | 'SUCCESS'
+  // purchase state: 'IDLE' | 'CONFIRMING' | 'MINTING' | 'SUCCESS' | 'ERROR'
   const [purchaseStep, setPurchaseStep] = useState('IDLE');
   const [ticketTier, setTicketTier] = useState('General Admission');
   const [createdTicket, setCreatedTicket] = useState(null);
   const [copiedHash, setCopiedHash] = useState(false);
+  const [purchaseError, setPurchaseError] = useState('');
 
   if (!purchaseModalEvent) return null;
 
   const event = purchaseModalEvent;
-  const price = ticketTier === 'VIP Pass (+ ₹1000)' ? event.price + 1000 : event.price;
+  const isVip = ticketTier === 'VIP Pass (+ ₹1000)';
+  const price = isVip ? event.price + 1000 : event.price;
+  const isOnChainMode = Boolean(currentAccount?.isMetaMask && isContractConfigured);
+  const displayEthPrice = event.priceEth || '0.0001 ETH';
 
   const handleStartPurchase = async () => {
     if (!currentAccount) {
@@ -46,39 +56,38 @@ export const PurchaseModal = () => {
       return;
     }
 
+    setPurchaseError('');
+
     try {
-      // Step 1: Confirming purchase
+      if (currentAccount.isMetaMask && !isSepolia) {
+        await switchToSepoliaNetwork();
+      }
+
       setPurchaseStep('CONFIRMING');
-      await new Promise(r => setTimeout(r, 1200));
 
-      // Step 2: Processing blockchain transaction
-      setPurchaseStep('MINTING');
-      await new Promise(r => setTimeout(r, 2000));
-
-      // Step 3: Ticket minted successfully
+      // Call purchaseTicket which handles MetaMask transaction or demo fallback
       const minted = await purchaseTicket({
         event,
         tier: ticketTier,
-        quantity: 1
+        quantity: 1,
       });
 
       setCreatedTicket(minted);
       setPurchaseStep('SUCCESS');
 
-      // Trigger Confetti!
       try {
         confetti({
           particleCount: 80,
           spread: 70,
-          origin: { y: 0.6 }
+          origin: { y: 0.6 },
         });
       } catch (err) {
         // ignore if canvas-confetti is not loaded
       }
-
     } catch (err) {
-      console.error(err);
-      setPurchaseStep('IDLE');
+      console.error('Purchase failed in modal:', err);
+      setPurchaseError(err.message || 'Transaction could not be completed.');
+      setPurchaseStep('ERROR');
     }
   };
 
@@ -86,6 +95,7 @@ export const PurchaseModal = () => {
     setPurchaseModalEvent(null);
     setPurchaseStep('IDLE');
     setCreatedTicket(null);
+    setPurchaseError('');
   };
 
   const handleViewTickets = () => {
@@ -111,9 +121,16 @@ export const PurchaseModal = () => {
         {/* Modal Header */}
         <div className="flex items-center justify-between pb-4 border-b border-slate-800">
           <div>
-            <span className="text-[11px] font-mono tracking-widest text-cyan-400 uppercase font-semibold">
-              ERC-721 SMART CONTRACT MINT
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-mono tracking-widest text-cyan-400 uppercase font-semibold">
+                ERC-721 SMART CONTRACT MINT
+              </span>
+              {isOnChainMode && (
+                <span className="px-1.5 py-0.2 text-[9px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded">
+                  LIVE SEPOLIA
+                </span>
+              )}
+            </div>
             <h3 className="text-lg font-bold text-white mt-0.5">
               {purchaseStep === 'SUCCESS' ? 'Ticket Minted Successfully!' : 'Get Event Pass'}
             </h3>
@@ -125,8 +142,6 @@ export const PurchaseModal = () => {
             <X className="w-5 h-5" />
           </button>
         </div>
-
-        {/* BODY BY STEP */}
 
         {/* 1. IDLE / PREPARATION STATE */}
         {purchaseStep === 'IDLE' && (
@@ -145,7 +160,9 @@ export const PurchaseModal = () => {
                   <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-950/80 text-blue-300 border border-blue-500/30">
                     {event.category}
                   </span>
-                  <span className="text-xs font-bold text-cyan-400">₹{price.toLocaleString()}</span>
+                  <span className="text-xs font-bold text-cyan-400">
+                    {isOnChainMode ? displayEthPrice : `₹${price.toLocaleString()}`}
+                  </span>
                 </div>
               </div>
             </div>
@@ -164,7 +181,9 @@ export const PurchaseModal = () => {
                   }`}
                 >
                   <p className="text-xs font-bold">General Admission</p>
-                  <p className="text-sm font-semibold text-cyan-300 mt-1">₹{event.price.toLocaleString()}</p>
+                  <p className="text-sm font-semibold text-cyan-300 mt-1">
+                    {isOnChainMode ? displayEthPrice : `₹${event.price.toLocaleString()}`}
+                  </p>
                 </button>
                 <button
                   type="button"
@@ -176,7 +195,9 @@ export const PurchaseModal = () => {
                   }`}
                 >
                   <p className="text-xs font-bold">VIP Pass (+ ₹1,000)</p>
-                  <p className="text-sm font-semibold text-cyan-300 mt-1">₹{(event.price + 1000).toLocaleString()}</p>
+                  <p className="text-sm font-semibold text-cyan-300 mt-1">
+                    {isOnChainMode ? displayEthPrice : `₹${(event.price + 1000).toLocaleString()}`}
+                  </p>
                 </button>
               </div>
             </div>
@@ -188,7 +209,7 @@ export const PurchaseModal = () => {
                 {currentAccount ? (
                   <span className="font-mono text-cyan-300 font-semibold flex items-center gap-1.5">
                     <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
-                    {currentAccount.shortAddress} ({currentAccount.shortName})
+                    {currentAccount.shortAddress} {currentAccount.isMetaMask ? '(MetaMask)' : `(${currentAccount.shortName})`}
                   </span>
                 ) : (
                   <button
@@ -204,16 +225,22 @@ export const PurchaseModal = () => {
                 <span className="font-mono text-slate-200">ERC-721 (Non-Fungible Token)</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-slate-400">Simulated Network</span>
-                <span className="font-mono text-purple-300">Ethereum Sepolia Testnet</span>
+                <span className="text-slate-400">Network</span>
+                <span className={`font-mono ${isOnChainMode ? 'text-amber-300 font-bold' : 'text-purple-300'}`}>
+                  {isOnChainMode ? 'Ethereum Sepolia Testnet (Live)' : 'Ethereum Sepolia (Demo Mode)'}
+                </span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-slate-400">Gas Fee Estimate</span>
-                <span className="font-mono text-emerald-400">≈ 0.0012 ETH (Simulated Free)</span>
+                <span className="font-mono text-emerald-400">
+                  {isOnChainMode ? 'Standard Sepolia Gas' : '≈ 0.0012 ETH (Simulated)'}
+                </span>
               </div>
               <div className="flex items-center justify-between pt-2 border-t border-slate-800 text-sm font-bold">
                 <span className="text-white">Total Amount</span>
-                <span className="text-cyan-400">₹{price.toLocaleString()}</span>
+                <span className="text-cyan-400">
+                  {isOnChainMode ? displayEthPrice : `₹${price.toLocaleString()}`}
+                </span>
               </div>
             </div>
 
@@ -243,22 +270,21 @@ export const PurchaseModal = () => {
             <div>
               <h4 className="text-lg font-bold text-white tracking-wide">
                 {purchaseStep === 'CONFIRMING' 
-                  ? '1. Confirming Purchase Request...' 
-                  : '2. Processing Blockchain Transaction...'}
+                  ? (isOnChainMode ? 'Approve in MetaMask...' : 'Confirming Purchase Request...') 
+                  : 'Minting NFT on Sepolia Blockchain...'}
               </h4>
               <p className="text-xs text-slate-400 max-w-sm mx-auto mt-1.5 leading-relaxed">
-                {purchaseStep === 'CONFIRMING'
-                  ? 'Validating wallet signature and allocating event ticket token ID from contract pool.'
-                  : 'Broadcasting minting transaction to EVM mempool & recording immutable ownership on Sepolia testnet.'}
+                {isOnChainMode
+                  ? 'Please review and confirm the transaction in your MetaMask browser popup window. Ethers.js is awaiting on-chain block inclusion.'
+                  : 'Allocating event ticket token ID and recording ownership on the ledger.'}
               </p>
             </div>
 
-            {/* Stepper indicator */}
             <div className="flex items-center gap-3">
               <div className={`flex items-center gap-1.5 text-xs font-mono font-medium ${
-                purchaseStep === 'CONFIRMING' ? 'text-cyan-400' : 'text-emerald-400'
+                purchaseStep === 'CONFIRMING' ? 'text-amber-400 animate-pulse' : 'text-emerald-400'
               }`}>
-                <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
+                <span className="w-2 h-2 rounded-full bg-amber-400" />
                 Sign Tx
               </div>
               <span className="w-6 h-[1px] bg-slate-700" />
@@ -266,13 +292,43 @@ export const PurchaseModal = () => {
                 purchaseStep === 'MINTING' ? 'text-cyan-400 animate-pulse' : 'text-slate-500'
               }`}>
                 <span className="w-2 h-2 rounded-full bg-slate-600" />
-                Mint ERC-721
+                Sepolia Mint
               </div>
               <span className="w-6 h-[1px] bg-slate-700" />
               <div className="flex items-center gap-1.5 text-xs font-mono font-medium text-slate-500">
                 <span className="w-2 h-2 rounded-full bg-slate-600" />
                 Confirmed
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* ERROR STATE */}
+        {purchaseStep === 'ERROR' && (
+          <div className="py-6 space-y-4 text-center">
+            <div className="w-14 h-14 mx-auto rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center border border-rose-500/40">
+              <AlertTriangle className="w-7 h-7" />
+            </div>
+            <div>
+              <h4 className="text-base font-bold text-white">Transaction Cancelled or Failed</h4>
+              <p className="text-xs text-rose-300 mt-1 max-w-sm mx-auto">
+                {purchaseError}
+              </p>
+            </div>
+            <div className="flex gap-2 pt-2">
+              <button
+                onClick={handleClose}
+                className="flex-1 py-2.5 px-3 rounded-xl border border-slate-700 bg-slate-900/60 hover:bg-slate-800 text-xs font-semibold text-slate-300"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => setPurchaseStep('IDLE')}
+                className="flex-1 py-2.5 px-3 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-xs font-bold text-slate-950 flex items-center justify-center gap-1.5"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span>Try Again</span>
+              </button>
             </div>
           </div>
         )}
@@ -286,7 +342,9 @@ export const PurchaseModal = () => {
               </div>
               <h4 className="text-base font-bold text-white">Ticket Minted Successfully!</h4>
               <p className="text-xs text-emerald-300 font-mono mt-0.5">
-                Saved to local blockchain state • Ready for Gate Entry
+                {createdTicket.isOnChain
+                  ? `Recorded on Ethereum Sepolia • Block #${createdTicket.blockNumber}`
+                  : 'Saved to local blockchain state • Ready for Gate Entry'}
               </p>
             </div>
 
@@ -315,13 +373,25 @@ export const PurchaseModal = () => {
               </div>
             </div>
 
-            {/* Tx Hash Copy Row */}
+            {/* Tx Hash Row */}
             <div className="p-2.5 rounded-lg bg-slate-900/80 border border-slate-800 flex items-center justify-between text-xs">
               <div className="min-w-0 pr-2">
                 <span className="text-[10px] text-slate-400 uppercase block font-mono">Transaction Hash</span>
-                <span className="font-mono text-[11px] text-purple-300 truncate block">
-                  {createdTicket.txHash}
-                </span>
+                {createdTicket.isOnChain && createdTicket.txHash?.startsWith('0x') ? (
+                  <a
+                    href={`https://sepolia.etherscan.io/tx/${createdTicket.txHash}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-mono text-[11px] text-cyan-300 hover:underline flex items-center gap-1 truncate"
+                  >
+                    <span className="truncate">{createdTicket.txHash}</span>
+                    <ExternalLink className="w-3 h-3 shrink-0" />
+                  </a>
+                ) : (
+                  <span className="font-mono text-[11px] text-purple-300 truncate block">
+                    {createdTicket.txHash}
+                  </span>
+                )}
               </div>
               <button
                 onClick={() => copyHash(createdTicket.txHash)}

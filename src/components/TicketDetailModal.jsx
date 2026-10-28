@@ -140,7 +140,9 @@ export const TicketDetailModal = () => {
 
                 <div className="flex items-center justify-between">
                   <span className="text-slate-400">Network</span>
-                  <span className="font-mono text-purple-300">Sepolia EVM Testnet (Simulated)</span>
+                  <span className={`font-mono ${ticket.isOnChain ? 'text-amber-300 font-bold' : 'text-purple-300'}`}>
+                    {ticket.isOnChain ? 'Ethereum Sepolia Testnet (Live)' : 'Sepolia EVM Testnet (Demo Mode)'}
+                  </span>
                 </div>
 
                 <div className="flex items-center justify-between">
@@ -156,7 +158,19 @@ export const TicketDetailModal = () => {
                 <div className="flex items-center justify-between pt-1 border-t border-slate-800">
                   <span className="text-slate-400">Transaction Hash</span>
                   <div className="flex items-center gap-1 font-mono text-purple-300">
-                    <span className="truncate max-w-[180px]">{ticket.txHash}</span>
+                    {ticket.isOnChain && ticket.txHash?.startsWith('0x') ? (
+                      <a
+                        href={`https://sepolia.etherscan.io/tx/${ticket.txHash}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-cyan-300 hover:underline flex items-center gap-1 truncate max-w-[180px]"
+                      >
+                        <span className="truncate">{ticket.txHash}</span>
+                        <ExternalLink className="w-3 h-3 shrink-0" />
+                      </a>
+                    ) : (
+                      <span className="truncate max-w-[180px]">{ticket.txHash}</span>
+                    )}
                     <button
                       onClick={() => copyText(ticket.txHash, 'tx')}
                       className="p-1 hover:text-white"

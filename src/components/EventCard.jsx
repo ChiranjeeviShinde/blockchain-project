@@ -27,8 +27,12 @@ export const EventCard = ({ event }) => {
           <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-slate-900/80 backdrop-blur-md text-cyan-300 border border-cyan-500/30">
             {event.category}
           </span>
-          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-black/70 backdrop-blur-md text-purple-300 border border-purple-500/30">
-            ERC-721
+          <span className={`text-[10px] font-mono px-2 py-0.5 rounded backdrop-blur-md border ${
+            event.isOnChain 
+              ? 'bg-amber-950/80 text-amber-300 border-amber-500/40' 
+              : 'bg-black/70 text-purple-300 border-purple-500/30'
+          }`}>
+            {event.isOnChain ? 'ON-CHAIN' : 'ERC-721'}
           </span>
         </div>
 
@@ -36,7 +40,9 @@ export const EventCard = ({ event }) => {
         <div className="absolute bottom-3 left-3">
           <div className="px-3 py-1 rounded-lg bg-black/80 backdrop-blur-md border border-slate-700">
             <span className="text-xs text-slate-400">Tickets from</span>
-            <p className="text-base font-extrabold text-cyan-400">₹{event.price.toLocaleString()}</p>
+            <p className="text-base font-extrabold text-cyan-400">
+              {event.isOnChain ? (event.priceEth || '0.0001 ETH') : `₹${event.price.toLocaleString()}`}
+            </p>
           </div>
         </div>
       </div>

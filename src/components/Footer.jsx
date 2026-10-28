@@ -52,7 +52,7 @@ export const Footer = () => {
                 <Ticket className="w-4 h-4 -rotate-12" />
               </div>
               <span className="text-lg font-bold text-white tracking-tight">
-                Chain<span className="text-cyan-400">Pass</span>
+              <span className="text-cyan-400">Tixora</span>
               </span>
             </Link>
             <p className="text-xs text-slate-400 leading-relaxed italic">
