@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useBlockchain } from '../context/BlockchainContext';
+import { verifyContractBytecode } from '../services/blockchainService';
 import { 
   X, 
   Wallet, 
@@ -41,6 +42,7 @@ export const WalletModal = () => {
   const [tempContractAddress, setTempContractAddress] = useState(contractAddress || '');
   const [addressSaved, setAddressSaved] = useState(false);
   const [localError, setLocalError] = useState('');
+  const [isVerifyingContract, setIsVerifyingContract] = useState(false);
 
   if (!isWalletModalOpen) return null;
 
@@ -58,17 +60,42 @@ export const WalletModal = () => {
     }
   };
 
-  const handleSaveContract = (e) => {
+  const handleSaveContract = async (e) => {
     e.preventDefault();
     const clean = tempContractAddress.trim();
-    if (clean && !/^0x[a-fA-F0-9]{40}$/.test(clean)) {
+    if (!clean) {
+      setLocalError('');
+      setContractAddress('');
+      setActiveMode('DEMO');
+      setAddressSaved(true);
+      setTimeout(() => setAddressSaved(false), 2500);
+      return;
+    }
+    if (!/^0x[a-fA-F0-9]{40}$/.test(clean)) {
       setLocalError('Contract address must begin with 0x followed by exactly 40 hex characters.');
       return;
     }
+    if (currentAccount?.address && clean.toLowerCase() === currentAccount.address.toLowerCase()) {
+      setLocalError('Caution: You entered your MetaMask wallet address, not a smart contract address! Contracts must be deployed separately to Sepolia (via Remix). Clear this field to use Demo Mode.');
+      return;
+    }
+
     setLocalError('');
-    setContractAddress(clean);
-    setAddressSaved(true);
-    setTimeout(() => setAddressSaved(false), 2500);
+    setIsVerifyingContract(true);
+    try {
+      const verification = await verifyContractBytecode(clean);
+      if (!verification.isValid) {
+        setLocalError(`Warning: ${verification.reason} If BlockTix.sol was not deployed to this address, minting will fail. You can clear the address to use Demo Mode.`);
+      }
+      setContractAddress(clean);
+      setAddressSaved(true);
+      setTimeout(() => setAddressSaved(false), 2500);
+    } catch (err) {
+      setContractAddress(clean);
+      setAddressSaved(true);
+    } finally {
+      setIsVerifyingContract(false);
+    }
   };
 
   return (
@@ -249,6 +276,53 @@ export const WalletModal = () => {
                   </>
                 )}
               </button>
+
+              {/* Operating Mode Selector for Connected MetaMask */}
+              {currentAccount?.isMetaMask && (
+                <div className="pt-3 border-t border-slate-800 space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-semibold text-slate-300">Default Execution Mode</span>
+                    <span className={`text-[10px] font-mono px-2 py-0.5 rounded font-bold ${
+                      activeMode === 'ON_CHAIN' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
+                    }`}>
+                      {activeMode === 'ON_CHAIN' ? 'LIVE SEPOLIA' : 'DEMO SIMULATION'}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setActiveMode('DEMO')}
+                      className={`p-2.5 rounded-lg text-left text-xs transition-all border ${
+                        activeMode === 'DEMO'
+                          ? 'bg-cyan-950/60 border-cyan-400 text-white shadow-glow-cyan/20'
+                          : 'bg-slate-950/40 border-slate-800 text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      <p className="font-bold flex items-center gap-1 text-cyan-300">
+                        <Sparkles className="w-3.5 h-3.5" /> Demo Mode
+                      </p>
+                      <p className="text-[10px] text-slate-400 mt-0.5">Free & instant for presentation</p>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveMode('ON_CHAIN')}
+                      disabled={!isContractConfigured}
+                      className={`p-2.5 rounded-lg text-left text-xs transition-all border ${
+                        activeMode === 'ON_CHAIN'
+                          ? 'bg-amber-950/60 border-amber-400 text-white shadow-glow-amber/20'
+                          : 'bg-slate-950/40 border-slate-800 text-slate-400 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed'
+                      }`}
+                    >
+                      <p className="font-bold flex items-center gap-1 text-amber-300">
+                        <Layers className="w-3.5 h-3.5" /> Sepolia Mode
+                      </p>
+                      <p className="text-[10px] text-slate-400 mt-0.5">
+                        {isContractConfigured ? 'Requires Sepolia test ETH' : 'Set contract in Smart Contract tab'}
+                      </p>
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="p-3 rounded-lg bg-slate-950/50 border border-slate-800/80 text-[11px] text-slate-400 space-y-1">
@@ -327,38 +401,55 @@ export const WalletModal = () => {
               <form onSubmit={handleSaveContract} className="space-y-2.5">
                 <input
                   type="text"
-                  placeholder="0x... (e.g. 0x89205A3A3b2A69De6Dbf7f01ED13B2108B2c43e7)"
+                  placeholder="0x... (paste your Sepolia deployed contract address)"
                   value={tempContractAddress}
                   onChange={(e) => setTempContractAddress(e.target.value)}
                   className="w-full px-3.5 py-2 text-xs font-mono bg-slate-900 border border-slate-700 rounded-lg text-white focus:outline-none focus:border-cyan-400"
                 />
 
-                {addressSaved && (
+                {localError && (
+                  <div className="p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-start gap-2">
+                    <AlertTriangle className="w-4 h-4 shrink-0 text-rose-400 mt-0.5" />
+                    <span>{localError}</span>
+                  </div>
+                )}
+
+                {addressSaved && !localError && (
                   <p className="text-xs text-emerald-400 flex items-center gap-1">
                     <Check className="w-3.5 h-3.5" />
-                    <span>Contract address saved to local storage!</span>
+                    <span>{tempContractAddress ? 'Contract address saved!' : 'Switched to Demo Mode!'}</span>
                   </p>
                 )}
 
                 <div className="flex gap-2">
                   <button
                     type="submit"
-                    className="flex-1 py-2 px-3 text-xs font-bold rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 transition-colors"
+                    disabled={isVerifyingContract}
+                    className="flex-1 py-2 px-3 text-xs font-bold rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-50"
                   >
-                    Save Contract Address
+                    {isVerifyingContract ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        <span>Verifying Bytecode...</span>
+                      </>
+                    ) : (
+                      <span>Save Contract Address</span>
+                    )}
                   </button>
-                  {contractAddress && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setTempContractAddress('');
-                        setContractAddress('');
-                      }}
-                      className="py-2 px-3 text-xs rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
-                    >
-                      Clear
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTempContractAddress('');
+                      setContractAddress('');
+                      setActiveMode('DEMO');
+                      setLocalError('');
+                      setAddressSaved(true);
+                      setTimeout(() => setAddressSaved(false), 2500);
+                    }}
+                    className="py-2 px-3 text-xs rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
+                  >
+                    Clear (Use Demo Mode)
+                  </button>
                 </div>
               </form>
             </div>

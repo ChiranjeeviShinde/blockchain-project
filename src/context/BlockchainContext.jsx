@@ -307,7 +307,7 @@ export const BlockchainProvider = ({ children }) => {
       };
 
       setCurrentAccount(newAcc);
-      setActiveMode('ON_CHAIN');
+      setActiveMode(isContractConfigured ? 'ON_CHAIN' : 'DEMO');
       setNetworkChainId(walletInfo.chainId);
       setIsWalletModalOpen(false);
 
@@ -375,7 +375,7 @@ export const BlockchainProvider = ({ children }) => {
   // ==========================================
   // 1. TICKET PURCHASE
   // ==========================================
-  const purchaseTicket = async ({ event, tier = 'General Admission', quantity = 1 }) => {
+  const purchaseTicket = async ({ event, tier = 'General Admission', quantity = 1, forceDemo = false }) => {
     if (!currentAccount) {
       setIsWalletModalOpen(true);
       throw new Error('Please connect your MetaMask wallet first.');
@@ -383,6 +383,7 @@ export const BlockchainProvider = ({ children }) => {
 
     // Determine if we are doing a real on-chain transaction
     const shouldExecuteOnChain =
+      !forceDemo &&
       currentAccount.isMetaMask &&
       isContractConfigured &&
       (event.isOnChain || activeMode === 'ON_CHAIN');
@@ -393,8 +394,15 @@ export const BlockchainProvider = ({ children }) => {
       }
 
       try {
-        const contract = await getSignerContract(contractAddress);
-        const eventIdToCall = event.contractEventId || 1;
+        const provider = getBrowserProvider();
+
+        // 1. Verify contract bytecode exists on Sepolia
+        const code = await provider.getCode(contractAddress);
+        if (!code || code === '0x' || code === '0x0') {
+          throw new Error(
+            `No smart contract found at address ${contractAddress} on Sepolia Testnet. Please deploy BlockTix.sol via Remix or switch to Demo Minting mode.`
+          );
+        }
 
         // Calculate price in wei
         let priceWei = 0n;
@@ -404,6 +412,17 @@ export const BlockchainProvider = ({ children }) => {
           // Default demo price ~ 0.0001 ETH
           priceWei = ethers.parseEther('0.0001');
         }
+
+        // 2. Verify account has enough Sepolia ETH for value + gas
+        const balance = await provider.getBalance(currentAccount.address);
+        if (balance < priceWei) {
+          throw new Error(
+            `Insufficient Sepolia ETH in your wallet (${parseFloat(ethers.formatEther(balance)).toFixed(4)} ETH). You need at least ${ethers.formatEther(priceWei)} ETH plus gas to purchase on-chain. Please request free Sepolia ETH from a faucet or switch to Demo Minting.`
+          );
+        }
+
+        const contract = await getSignerContract(contractAddress);
+        const eventIdToCall = event.contractEventId || 1;
 
         // Call smart contract purchaseTicket
         const tx = await contract.purchaseTicket(eventIdToCall, tier, {
@@ -602,6 +621,21 @@ export const BlockchainProvider = ({ children }) => {
     );
 
     return newTicket;
+  };
+
+  // Quick helper to claim/mint a test pass directly for the currently connected wallet
+  const claimDemoTicket = async (targetEvent = null, tier = 'General Admission') => {
+    if (!currentAccount) {
+      setIsWalletModalOpen(true);
+      throw new Error('Please connect your wallet first.');
+    }
+    const evt = targetEvent || events[0] || INITIAL_EVENTS[0];
+    return await purchaseTicket({
+      event: evt,
+      tier,
+      quantity: 1,
+      forceDemo: true,
+    });
   };
 
   // ==========================================
@@ -1236,6 +1270,7 @@ export const BlockchainProvider = ({ children }) => {
 
         // Contract / Core actions
         purchaseTicket,
+        claimDemoTicket,
         transferTicket,
         verifyTicket,
         approveTicketEntry,

@@ -40,7 +40,8 @@ export const Navbar = () => {
     switchToSepoliaNetwork,
     contractAddress,
     isContractConfigured,
-    activeMode
+    activeMode,
+    setActiveMode,
   } = useBlockchain();
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -211,6 +212,17 @@ export const Navbar = () => {
                           <span className={`font-mono text-[10px] ${isContractConfigured ? 'text-emerald-400' : 'text-slate-500'}`}>
                             {isContractConfigured ? `${contractAddress.substring(0, 6)}...${contractAddress.substring(contractAddress.length - 4)}` : 'Not Set (Demo Mode)'}
                           </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-slate-400">Mode:</span>
+                          <button
+                            type="button"
+                            onClick={() => setActiveMode(activeMode === 'ON_CHAIN' ? 'DEMO' : 'ON_CHAIN')}
+                            className="text-[10px] font-mono font-bold text-cyan-300 hover:underline flex items-center gap-1"
+                          >
+                            <span>{activeMode === 'ON_CHAIN' ? 'Live Sepolia' : 'Demo Mode'}</span>
+                            <span className="text-slate-500 text-[9px]">(toggle)</span>
+                          </button>
                         </div>
                       </div>
                     </div>

@@ -153,6 +153,29 @@ export const getSignerContract = async (contractAddress = getContractAddress()) 
 };
 
 /**
+ * Verifies if an address contains deployed bytecode on Sepolia
+ */
+export const verifyContractBytecode = async (contractAddress) => {
+  if (!contractAddress || !ethers.isAddress(contractAddress)) {
+    return { isValid: false, reason: 'Invalid Ethereum address format.' };
+  }
+  try {
+    const provider = isMetaMaskInstalled() ? getBrowserProvider() : getFallbackProvider();
+    const code = await provider.getCode(contractAddress);
+    if (!code || code === '0x' || code === '0x0') {
+      return {
+        isValid: false,
+        reason: 'No smart contract bytecode found at this address on Sepolia. The address might be an undeployed address or a normal user wallet (EOA).',
+      };
+    }
+    return { isValid: true, reason: 'Smart contract verified on Sepolia.' };
+  } catch (err) {
+    console.warn('Contract bytecode verification error:', err);
+    return { isValid: false, reason: 'Could not query Sepolia RPC for contract bytecode.' };
+  }
+};
+
+/**
  * Translates Ethereum / ethers error codes into friendly user messages
  */
 export const parseBlockchainError = (err) => {
@@ -164,8 +187,21 @@ export const parseBlockchainError = (err) => {
   }
 
   // Insufficient funds
-  if (err.code === 'INSUFFICIENT_FUNDS' || err.message?.includes('insufficient funds')) {
-    return 'Insufficient Sepolia ETH in your wallet to cover ticket price and gas fees.';
+  if (
+    err.code === 'INSUFFICIENT_FUNDS' ||
+    err.message?.includes('insufficient funds') ||
+    err.shortMessage?.includes('insufficient funds')
+  ) {
+    return 'Insufficient Sepolia ETH in your wallet to cover ticket price and gas fees. Please acquire Sepolia testnet ETH from a faucet or use Demo Minting mode.';
+  }
+
+  // Missing revert data (CALL_EXCEPTION)
+  if (
+    err.shortMessage === 'missing revert data' ||
+    err.message?.includes('missing revert data') ||
+    err.code === 'CALL_EXCEPTION'
+  ) {
+    return 'Smart contract transaction reverted (missing revert data). This usually means the contract address does not have BlockTix deployed on Sepolia, your wallet has 0 Sepolia ETH for gas, or the event is inactive. You can switch to Demo Minting or verify your contract address in Settings.';
   }
 
   // Revert reason extraction

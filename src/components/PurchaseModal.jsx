@@ -31,6 +31,7 @@ export const PurchaseModal = () => {
     switchToSepoliaNetwork,
     contractAddress,
     isContractConfigured,
+    activeMode,
   } = useBlockchain();
 
   const navigate = useNavigate();
@@ -42,12 +43,17 @@ export const PurchaseModal = () => {
   const [copiedHash, setCopiedHash] = useState(false);
   const [purchaseError, setPurchaseError] = useState('');
 
+  // Preference for minting mode: 'ON_CHAIN' or 'DEMO'
+  const [mintModePreference, setMintModePreference] = useState(() => {
+    return (currentAccount?.isMetaMask && isContractConfigured && activeMode === 'ON_CHAIN') ? 'ON_CHAIN' : 'DEMO';
+  });
+
   if (!purchaseModalEvent) return null;
 
   const event = purchaseModalEvent;
   const isVip = ticketTier === 'VIP Pass (+ ₹1000)';
   const price = isVip ? event.price + 1000 : event.price;
-  const isOnChainMode = Boolean(currentAccount?.isMetaMask && isContractConfigured);
+  const isOnChainMode = Boolean(currentAccount?.isMetaMask && isContractConfigured && mintModePreference === 'ON_CHAIN');
   const displayEthPrice = event.priceEth || '0.0001 ETH';
 
   const handleStartPurchase = async () => {
@@ -59,7 +65,7 @@ export const PurchaseModal = () => {
     setPurchaseError('');
 
     try {
-      if (currentAccount.isMetaMask && !isSepolia) {
+      if (isOnChainMode && currentAccount.isMetaMask && !isSepolia) {
         await switchToSepoliaNetwork();
       }
 
@@ -70,6 +76,7 @@ export const PurchaseModal = () => {
         event,
         tier: ticketTier,
         quantity: 1,
+        forceDemo: !isOnChainMode,
       });
 
       setCreatedTicket(minted);
@@ -202,6 +209,53 @@ export const PurchaseModal = () => {
               </div>
             </div>
 
+            {/* Minting Mode Selector when MetaMask is connected */}
+            {currentAccount?.isMetaMask && (
+              <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800 space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-semibold text-slate-300">Minting Mode</span>
+                  <span className={`text-[10px] font-mono px-2 py-0.5 rounded font-bold ${
+                    isOnChainMode ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
+                  }`}>
+                    {isOnChainMode ? 'LIVE CONTRACT' : 'DEMO SIMULATION'}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setMintModePreference('DEMO')}
+                    className={`p-2.5 rounded-lg text-left text-xs transition-all border ${
+                      !isOnChainMode
+                        ? 'bg-cyan-950/60 border-cyan-400 text-white shadow-glow-cyan/20'
+                        : 'bg-slate-950/40 border-slate-800 text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <p className="font-bold flex items-center gap-1 text-cyan-300">
+                      <Sparkles className="w-3.5 h-3.5" /> Demo Mint (Free)
+                    </p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">Instant test mint to your wallet</p>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMintModePreference('ON_CHAIN')}
+                    disabled={!isContractConfigured}
+                    className={`p-2.5 rounded-lg text-left text-xs transition-all border ${
+                      isOnChainMode
+                        ? 'bg-amber-950/60 border-amber-400 text-white shadow-glow-amber/20'
+                        : 'bg-slate-950/40 border-slate-800 text-slate-400 hover:text-white disabled:opacity-40 disabled:cursor-not-allowed'
+                    }`}
+                  >
+                    <p className="font-bold flex items-center gap-1 text-amber-300">
+                      <Layers className="w-3.5 h-3.5" /> Sepolia Contract
+                    </p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">
+                      {isContractConfigured ? 'Requires Sepolia test ETH' : 'Requires deployed contract'}
+                    </p>
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Blockchain Details Section */}
             <div className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800 space-y-2 text-xs">
               <div className="flex items-center justify-between">
@@ -311,24 +365,61 @@ export const PurchaseModal = () => {
             </div>
             <div>
               <h4 className="text-base font-bold text-white">Transaction Cancelled or Failed</h4>
-              <p className="text-xs text-rose-300 mt-1 max-w-sm mx-auto">
+              <p className="text-xs text-rose-300 mt-1.5 max-w-sm mx-auto leading-relaxed">
                 {purchaseError}
               </p>
             </div>
-            <div className="flex gap-2 pt-2">
+
+            <div className="space-y-2 pt-2">
+              {/* One-click Demo Mint fallback */}
               <button
-                onClick={handleClose}
-                className="flex-1 py-2.5 px-3 rounded-xl border border-slate-700 bg-slate-900/60 hover:bg-slate-800 text-xs font-semibold text-slate-300"
+                type="button"
+                onClick={async () => {
+                  try {
+                    setPurchaseStep('CONFIRMING');
+                    const minted = await purchaseTicket({
+                      event,
+                      tier: ticketTier,
+                      quantity: 1,
+                      forceDemo: true,
+                    });
+                    setCreatedTicket(minted);
+                    setPurchaseStep('SUCCESS');
+                    try {
+                      confetti({
+                        particleCount: 80,
+                        spread: 70,
+                        origin: { y: 0.6 },
+                      });
+                    } catch (err) {}
+                  } catch (err) {
+                    setPurchaseError(err.message || 'Demo minting failed');
+                    setPurchaseStep('ERROR');
+                  }
+                }}
+                className="w-full py-2.5 px-4 rounded-xl font-bold text-xs bg-gradient-to-r from-brand-blue via-blue-600 to-brand-cyan hover:from-blue-600 hover:to-cyan-400 text-white shadow-glow-cyan transition-all flex items-center justify-center gap-2"
               >
-                Cancel
+                <Sparkles className="w-4 h-4" />
+                <span>⚡ Mint in Demo Mode Instead (Instant & Free)</span>
               </button>
-              <button
-                onClick={() => setPurchaseStep('IDLE')}
-                className="flex-1 py-2.5 px-3 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-xs font-bold text-slate-950 flex items-center justify-center gap-1.5"
-              >
-                <RefreshCw className="w-3.5 h-3.5" />
-                <span>Try Again</span>
-              </button>
+
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={handleClose}
+                  className="flex-1 py-2 px-3 rounded-xl border border-slate-700 bg-slate-900/60 hover:bg-slate-800 text-xs font-semibold text-slate-300 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPurchaseStep('IDLE')}
+                  className="flex-1 py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 flex items-center justify-center gap-1.5 transition-colors"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  <span>Try Again</span>
+                </button>
+              </div>
             </div>
           </div>
         )}
